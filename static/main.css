@@ -1,0 +1,25 @@
+div.columns {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  background-color: #ececec;
+  padding: 5px 0 5px 10px;
+}
+
+div.column {
+  background: rgb(153, 234, 216);
+  margin: 5px 10px 5px 0;
+  padding: 0 5px 5px 5px;
+  width: 350px;
+}
+
+div.card {
+  background: rgb(179, 243, 202);
+  margin: 5px 0 0 0;
+  padding: 5px;
+}
+
+span.up-votes {
+  color: red;
+  font-weight: bold;
+}
