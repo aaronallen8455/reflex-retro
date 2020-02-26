@@ -37,7 +37,7 @@ applyColumnEvent :: ColumnEvent -> M.Map Int ColumnState -> M.Map Int ColumnStat
 applyColumnEvent (AddColumn colName) colMap
   | T.null colName = colMap
   | otherwise =
-    let nxtId = maybe 0 fst $ M.lookupMax colMap
+    let nxtId = maybe 0 (succ . fst) $ M.lookupMax colMap
      in M.insert nxtId (ColumnState colName M.empty) colMap
 applyColumnEvent (DeleteColumn colId) colMap
   = M.delete colId colMap

@@ -15,12 +15,14 @@ import           Safe (headMay)
 
 import           Reflex.Dom.Core
 
+import qualified Widget.Comments as Comments
 import           Widget.EditableText (editableText)
 
 data CardState =
   CardState
-    { _cardText  :: T.Text
-    , _cardLikes :: Int
+    { _cardText     :: T.Text
+    , _cardLikes    :: Int
+    , _cardComments :: M.Map Int Comments.CommentState
     }
 
 makeLenses ''CardState
@@ -31,18 +33,21 @@ data CardEvent
   | UpVote Int
   | DownVote Int
   | ContentChange Int T.Text
+  | CardCommentEvent Int Comments.CommentEvent
 
 applyCardEvent :: CardEvent -> M.Map Int CardState -> M.Map Int CardState
 applyCardEvent (DeleteCard i) cardMap = M.delete i cardMap
 applyCardEvent (AddCard txt) cardMap =
   let nxt = maybe 0 (succ . fst) $ M.lookupMax cardMap
-   in M.insert nxt (CardState txt 0) cardMap
+   in M.insert nxt (CardState txt 0 M.empty) cardMap
 applyCardEvent (UpVote i) cardMap =
   M.adjust (cardLikes +~ 1) i cardMap
 applyCardEvent (DownVote i) cardMap =
   M.adjust (cardLikes -~ 1) i cardMap
 applyCardEvent (ContentChange i newTxt) cardMap =
   M.adjust (cardText .~ newTxt) i cardMap
+applyCardEvent (CardCommentEvent i ev) cardMap =
+  M.adjust (cardComments %~ Comments.applyCommentEvent ev) i cardMap
 
 cardsWidget :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m)
             => Dynamic t (M.Map Int CardState) -> m (Event t CardEvent)
@@ -54,7 +59,7 @@ cardsWidget cardMapDyn = do
                           <@  addCardClickEv
 
   cardWidgetEvents
-    <- flip fforMaybe (headMay . M.elems)
+    <- fmapMaybe (headMay . M.elems)
    <$> listViewWithKey cardMapDyn cardWidget
 
   pure $ leftmost [addCardEv, cardWidgetEvents]
@@ -72,9 +77,13 @@ cardWidget cardId cardStateDyn = elClass "div" "card" $ do
   upVoteCardEv <- (UpVote cardId <$) <$> button "+1"
   downVoteCardEv <- (DownVote cardId <$) <$> button "-1"
 
+  commentEvents <- fmap (CardCommentEvent cardId)
+               <$> Comments.commentsWidget (_cardComments <$> cardStateDyn)
+
   pure $ leftmost [ contentChangeEv
                   , deleteCardEv
                   , upVoteCardEv
                   , downVoteCardEv
+                  , commentEvents
                   ]
 

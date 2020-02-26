@@ -21,6 +21,7 @@ library
     Frontend
   other-modules: Widget.Cards
                , Widget.Columns
+               , Widget.Comments
                , Widget.EditableText
   ghc-options: -Wall
 

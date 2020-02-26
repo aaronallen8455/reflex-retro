@@ -19,6 +19,15 @@ div.card {
   padding: 5px;
 }
 
+div.comments {
+}
+
+div.comment {
+  background-color: #eeda90;
+  border-top: solid 1px #e0a733;
+  padding: 5px;
+}
+
 span.up-votes {
   color: red;
   font-weight: bold;
