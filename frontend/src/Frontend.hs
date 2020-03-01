@@ -6,6 +6,7 @@
 module Frontend where
 
 import           Control.Lens
+import           Control.Monad (void)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.TH as Aeson
 import qualified Data.List.NonEmpty as NE
@@ -17,25 +18,36 @@ import           Obelisk.Route
 import           Obelisk.Generated.Static
 import qualified Text.URI as URI
 
+import qualified Language.Javascript.JSaddle.Evaluate as JS
+import qualified Language.Javascript.JSaddle.Types as JS
 import           Reflex.Dom.Core
 
 import           Common.Route
+import           Common.Markdown (ToMarkdown(..))
 import qualified Widget.ActionItems as ActionItems
 import qualified Widget.Columns as Columns
 import           Widget.EditableText (editableText)
+import           Widget.SimpleButton (simpleButton)
 
 data FrontendState =
   FrontendState
     { _fsColumns     :: M.Map Int Columns.ColumnState
-    , _fsActionItems :: M.Map Int ActionItems.ActionItemState
+    , _fsActionItems :: ActionItems.ActionItems
     , _fsTitle       :: T.Text
     }
 
 makeLenses ''FrontendState
 Aeson.deriveJSON Aeson.defaultOptions ''FrontendState
 
+instance ToMarkdown FrontendState where
+  toMarkdown fs =
+    T.unlines
+      $ "# " <> _fsTitle fs
+      : toMarkdown (_fsActionItems fs)
+      : map toMarkdown (M.elems $ _fsColumns fs)
+
 initFrontendState :: FrontendState
-initFrontendState = FrontendState Columns.initColumns M.empty "Retro"
+initFrontendState = FrontendState Columns.initColumns mempty "Retro"
 
 data FrontendEvent
   = ColEvent Columns.ColumnEvent
@@ -78,7 +90,6 @@ frontend = Frontend
                 , URI.uriScheme = Just wsScheme
                 }
 
-        -- will changes applied by the messages received be sent back to the server?
         ws <- case mbUri of
                 Just uri ->
                   webSocket (URI.render uri) def { _webSocketConfig_send = pure . Aeson.encode <$> columnEvents }
@@ -87,6 +98,7 @@ frontend = Frontend
         let wsEvents = fmapMaybe Aeson.decodeStrict
                      $ _webSocket_recv ws
 
+            -- TODO make so events can be batched?
             frontendEvents = leftmost [ wsEvents
                                       , editTitleEv
                                       , columnEvents
@@ -105,6 +117,16 @@ frontend = Frontend
 
         actionItemEvents <- fmap ActionItemEvent
                         <$> ActionItems.actionItemsWidget (_fsActionItems <$> stateDyn)
+
+        clipboardClickEv <- simpleButton "Copy Markdown to Clipboard"
+
+        let markdownEv = toMarkdown
+                     <$> current stateDyn
+                     <@  clipboardClickEv
+
+        performEvent_ . ffor markdownEv $ \md ->
+          void . JS.liftJSM . JS.eval
+            $ "navigator.clipboard.writeText(`" <> md <> "`)"
 
         pure ()
 

@@ -12,6 +12,8 @@ import qualified Data.Text as T
 
 import           Reflex.Dom.Core
 
+import           Widget.SimpleButton (simpleButton)
+
 data TextBoxEv
   = MakeEditable
   | DoneEditing T.Text
@@ -32,8 +34,8 @@ editableTextDynClass :: (MonadFix m, MonadHold t m, DomBuilder t m, PostBuild t 
 editableTextDynClass txtDyn classDyn = mdo
   isEditableDyn <- foldDyn const False (fmapMaybe isEditable textBoxEvents)
 
-  let mkElement isEditable =
-        if isEditable
+  let mkElement editable =
+        if editable
            then do
              initVal <- sample $ current txtDyn
              inp <- inputElement def { _inputElementConfig_initialValue = initVal }
@@ -41,9 +43,9 @@ editableTextDynClass txtDyn classDyn = mdo
 
              confirmEv <- fmap DoneEditing
                         . tagPromptlyDyn inpValue
-                      <$> button "Ok"
+                      <$> simpleButton "Ok"
 
-             cancelEv <- (CancelEditing <$) <$> button "Cancel"
+             cancelEv <- (CancelEditing <$) <$> simpleButton "Cancel"
              pure $ leftmost [confirmEv, cancelEv]
            else do
              contentEl <- fst <$> elDynClass' "span" classDyn (dynText txtDyn)

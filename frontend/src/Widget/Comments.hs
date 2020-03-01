@@ -16,15 +16,20 @@ import           Safe (headMay)
 
 import           Reflex.Dom.Core
 
+import           Common.Markdown (ToMarkdown(..))
 import           Widget.EditableText (editableText)
+import           Widget.SimpleButton (simpleButton)
 
 data CommentState =
   CommentState
     { _csContent :: T.Text
-    }
+    } deriving (Show, Eq)
 
 makeLenses ''CommentState
 Aeson.deriveJSON Aeson.defaultOptions ''CommentState
+
+instance ToMarkdown CommentState where
+  toMarkdown = _csContent
 
 data CommentEvent
   = AddComment T.Text
@@ -49,8 +54,7 @@ commentsWidget :: (DomBuilder t m, PostBuild t m, MonadHold t m, MonadFix m)
                => Dynamic t (M.Map Int CommentState) -> m (Event t CommentEvent)
 commentsWidget comMapDyn = divClass "comments" $ do
   addCommentInputDyn <- _inputElement_value <$> inputElement def
-  addCommentClickEv  <- domEvent Click . fst
-                    <$> el' "button" (text "Add Comment")
+  addCommentClickEv  <- simpleButton "Add Comment"
 
   let addCardEv = AddComment <$> current addCommentInputDyn
                              <@  addCommentClickEv
@@ -68,7 +72,6 @@ commentWidget comId comStateDyn = divClass "comment" $ do
              . (fmap . fmap) (EditComment comId)
              $ editableText (_csContent <$> comStateDyn)
 
-  deleteComEv <- (DeleteComment comId <$) . domEvent Click . fst
-             <$> el' "button" (text "X")
+  deleteComEv <- (DeleteComment comId <$) <$> simpleButton "X"
 
   pure $ leftmost [editComEv, deleteComEv]

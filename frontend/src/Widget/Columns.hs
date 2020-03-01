@@ -17,8 +17,10 @@ import           Safe (headMay)
 
 import           Reflex.Dom.Core
 
+import           Common.Markdown (ToMarkdown(..))
 import qualified Widget.Cards as Cards
 import           Widget.EditableText (editableText)
+import           Widget.SimpleButton (simpleButton)
 
 data ColumnState =
   ColumnState
@@ -28,6 +30,13 @@ data ColumnState =
 
 makeLenses ''ColumnState
 Aeson.deriveJSON Aeson.defaultOptions ''ColumnState
+
+instance ToMarkdown ColumnState where
+  toMarkdown cs =
+    T.unlines
+      $ "### " <> _colTitle cs
+      : map (\(i, c) -> T.pack (show i) <> ". " <> toMarkdown c)
+            ([1 :: Int ..] `zip` M.elems (_colCards cs))
 
 data ColumnEvent
   = DeleteColumn Int
@@ -55,7 +64,7 @@ columnsWidget :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m)
               => Dynamic t (M.Map Int ColumnState) -> m (Event t ColumnEvent)
 columnsWidget colMapDyn = do
   addColumnNameDyn <- _inputElement_value <$> inputElement def
-  addColumnClickEv <- button "Add Column"
+  addColumnClickEv <- simpleButton "Add Column"
   let addColumnEv = AddColumn <$> current addColumnNameDyn
                               <@  addColumnClickEv
 
@@ -73,7 +82,7 @@ columnWidget colId colStateDyn = elClass "div" "column" $ do
     <- (fmap . fmap) (ChangeTitle colId)
      . el "h3" $ editableText (_colTitle <$> colStateDyn)
 
-  deleteColumnEv <- (DeleteColumn colId <$) <$> button "X"
+  deleteColumnEv <- (DeleteColumn colId <$) <$> simpleButton "X"
 
   cardWidgetEvents <- Cards.cardsWidget $ _colCards <$> colStateDyn
 

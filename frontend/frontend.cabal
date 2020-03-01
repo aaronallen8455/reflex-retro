@@ -26,6 +26,7 @@ library
                , Widget.Columns
                , Widget.Comments
                , Widget.EditableText
+               , Widget.SimpleButton
   ghc-options: -Wall
 
 executable frontend
