@@ -9,6 +9,7 @@ module Widget.Cards
 
 import           Control.Lens
 import           Control.Monad.Fix (MonadFix)
+import qualified Data.Aeson.TH as Aeson
 import qualified Data.Map as M
 import qualified Data.Text as T
 import           Safe (headMay)
@@ -26,6 +27,8 @@ data CardState =
     }
 
 makeLenses ''CardState
+Aeson.deriveJSON Aeson.defaultOptions { Aeson.fieldLabelModifier = tail }
+                 ''CardState
 
 data CardEvent
   = DeleteCard Int

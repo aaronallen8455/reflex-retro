@@ -5,18 +5,20 @@ build-type: Simple
 
 library
   hs-source-dirs: src
-  build-depends: base
+  build-depends: aeson
+               , base
                , common
-               , obelisk-frontend
-               , obelisk-route
-               , jsaddle
-               , reflex-dom
-               , obelisk-executable-config-lookup
-               , obelisk-generated-static
-               , text
                , containers
-               , safe
+               , jsaddle
                , lens
+               , modern-uri
+               , obelisk-executable-config-lookup
+               , obelisk-frontend
+               , obelisk-generated-static
+               , obelisk-route
+               , reflex-dom
+               , safe
+               , text
   exposed-modules:
     Frontend
   other-modules: Widget.Cards

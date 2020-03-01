@@ -10,6 +10,7 @@ module Widget.Columns
 
 import           Control.Lens
 import           Control.Monad.Fix (MonadFix)
+import qualified Data.Aeson.TH as Aeson
 import qualified Data.Map as M
 import qualified Data.Text as T
 import           Safe (headMay)
@@ -26,6 +27,8 @@ data ColumnState =
     }
 
 makeLenses ''ColumnState
+Aeson.deriveJSON Aeson.defaultOptions { Aeson.fieldLabelModifier = tail }
+                 ''ColumnState
 
 data ColumnEvent
   = DeleteColumn Int

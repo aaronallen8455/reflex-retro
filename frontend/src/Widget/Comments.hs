@@ -9,6 +9,7 @@ module Widget.Comments
 
 import           Control.Lens
 import           Control.Monad.Fix (MonadFix)
+import qualified Data.Aeson.TH as Aeson
 import qualified Data.Map as M
 import qualified Data.Text as T
 import           Safe (headMay)
@@ -23,6 +24,8 @@ data CommentState =
     }
 
 makeLenses ''CommentState
+Aeson.deriveJSON Aeson.defaultOptions { Aeson.fieldLabelModifier = tail }
+                 ''CommentState
 
 data CommentEvent
   = AddComment T.Text
