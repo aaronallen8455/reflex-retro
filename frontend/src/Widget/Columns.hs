@@ -48,7 +48,8 @@ applyColumnEvent (DeleteColumn colId) colMap
 applyColumnEvent (ColCardEvent colId cardEvent) colMap
   = M.adjust (colCards %~ Cards.applyCardEvent cardEvent) colId colMap
 applyColumnEvent (ChangeTitle colId newTitle) colMap
-  = M.adjust (colTitle .~ newTitle) colId colMap
+  | T.null newTitle = colMap
+  | otherwise = M.adjust (colTitle .~ newTitle) colId colMap
 
 columnsWidget :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m)
               => Dynamic t (M.Map Int ColumnState) -> m (Event t ColumnEvent)

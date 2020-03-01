@@ -34,13 +34,16 @@ data CommentEvent
 Aeson.deriveJSON Aeson.defaultOptions ''CommentEvent
 
 applyCommentEvent :: CommentEvent -> M.Map Int CommentState -> M.Map Int CommentState
-applyCommentEvent (AddComment txt) comMap =
-  let nxtId = maybe 0 (succ . fst) $ M.lookupMax comMap
-   in M.insert nxtId (CommentState txt) comMap
+applyCommentEvent (AddComment txt) comMap
+  | T.null txt = comMap
+  | otherwise =
+      let nxtId = maybe 0 (succ . fst) $ M.lookupMax comMap
+       in M.insert nxtId (CommentState txt) comMap
 applyCommentEvent (DeleteComment i) comMap =
   M.delete i comMap
-applyCommentEvent (EditComment i txt) comMap =
-  M.adjust (csContent .~ txt) i comMap
+applyCommentEvent (EditComment i txt) comMap
+  | T.null txt = comMap
+  | otherwise = M.adjust (csContent .~ txt) i comMap
 
 commentsWidget :: (DomBuilder t m, PostBuild t m, MonadHold t m, MonadFix m)
                => Dynamic t (M.Map Int CommentState) -> m (Event t CommentEvent)

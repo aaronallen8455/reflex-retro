@@ -10,6 +10,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.TH as Aeson
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as M
+import qualified Data.Text as T
 import qualified Obelisk.Configs as Cfg
 import           Obelisk.Frontend
 import           Obelisk.Route
@@ -19,25 +20,28 @@ import qualified Text.URI as URI
 import           Reflex.Dom.Core
 
 import           Common.Route
-import qualified Widget.Columns as Columns
 import qualified Widget.ActionItems as ActionItems
+import qualified Widget.Columns as Columns
+import           Widget.EditableText (editableText)
 
 data FrontendState =
   FrontendState
-    { _fsColumns :: M.Map Int Columns.ColumnState
+    { _fsColumns     :: M.Map Int Columns.ColumnState
     , _fsActionItems :: M.Map Int ActionItems.ActionItemState
+    , _fsTitle       :: T.Text
     }
 
 makeLenses ''FrontendState
 Aeson.deriveJSON Aeson.defaultOptions ''FrontendState
 
 initFrontendState :: FrontendState
-initFrontendState = FrontendState Columns.initColumns M.empty
+initFrontendState = FrontendState Columns.initColumns M.empty "Retro"
 
 data FrontendEvent
   = ColEvent Columns.ColumnEvent
   | ActionItemEvent ActionItems.ActionItemEvent
   | Replace FrontendState
+  | ChangeTitle T.Text
 
 Aeson.deriveJSON Aeson.defaultOptions ''FrontendEvent
 
@@ -47,6 +51,9 @@ applyFrontendEvent (ColEvent ev) fs =
   fs & fsColumns %~ Columns.applyColumnEvent ev
 applyFrontendEvent (ActionItemEvent ev) fs =
   fs & fsActionItems %~ ActionItems.applyActionItemEvent ev
+applyFrontendEvent (ChangeTitle txt) fs
+  | not $ T.null txt = fs & fsTitle .~ txt
+  | otherwise = fs
 
 frontend :: Frontend (R FrontendRoute)
 frontend = Frontend
@@ -79,10 +86,19 @@ frontend = Frontend
 
         let wsEvents = fmapMaybe Aeson.decodeStrict
                      $ _webSocket_recv ws
-            frontendEvents = leftmost [wsEvents, columnEvents, actionItemEvents]
+
+            frontendEvents = leftmost [ wsEvents
+                                      , editTitleEv
+                                      , columnEvents
+                                      , actionItemEvents
+                                      ]
 
         stateDyn <- foldDyn applyFrontendEvent initFrontendState
                     frontendEvents
+
+        editTitleEv
+          <- fmap ChangeTitle
+         <$> elClass "h2" "title" (editableText (_fsTitle <$> stateDyn))
 
         columnEvents <- fmap ColEvent
                     <$> Columns.columnsWidget (_fsColumns <$> stateDyn)

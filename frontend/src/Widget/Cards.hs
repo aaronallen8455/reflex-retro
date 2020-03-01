@@ -41,15 +41,18 @@ Aeson.deriveJSON Aeson.defaultOptions ''CardEvent
 
 applyCardEvent :: CardEvent -> M.Map Int CardState -> M.Map Int CardState
 applyCardEvent (DeleteCard i) cardMap = M.delete i cardMap
-applyCardEvent (AddCard txt) cardMap =
-  let nxt = maybe 0 (succ . fst) $ M.lookupMax cardMap
-   in M.insert nxt (CardState txt 0 M.empty) cardMap
+applyCardEvent (AddCard txt) cardMap
+  | T.null txt = cardMap
+  | otherwise =
+      let nxt = maybe 0 (succ . fst) $ M.lookupMax cardMap
+       in M.insert nxt (CardState txt 0 M.empty) cardMap
 applyCardEvent (UpVote i) cardMap =
   M.adjust (cardLikes +~ 1) i cardMap
 applyCardEvent (DownVote i) cardMap =
   M.adjust (cardLikes -~ 1) i cardMap
-applyCardEvent (ContentChange i newTxt) cardMap =
-  M.adjust (cardText .~ newTxt) i cardMap
+applyCardEvent (ContentChange i newTxt) cardMap
+  | T.null newTxt = cardMap
+  | otherwise = M.adjust (cardText .~ newTxt) i cardMap
 applyCardEvent (CardCommentEvent i ev) cardMap =
   M.adjust (cardComments %~ Comments.applyCommentEvent ev) i cardMap
 
