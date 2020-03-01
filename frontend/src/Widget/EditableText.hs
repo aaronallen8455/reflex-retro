@@ -2,7 +2,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
 module Widget.EditableText
-  ( editableText
+  ( editableTextDynClass
+  , editableTextClass
+  , editableText
   ) where
 
 import           Control.Monad.Fix (MonadFix)
@@ -23,10 +25,11 @@ isEditable :: TextBoxEv -> Maybe Bool
 isEditable MakeEditable  = Just True
 isEditable _             = Just False
 
-editableText :: (MonadFix m, MonadHold t m, DomBuilder t m, PostBuild t m, Reflex t)
-             => Dynamic t T.Text
-             -> m (Event t T.Text)
-editableText txtDyn = mdo
+editableTextDynClass :: (MonadFix m, MonadHold t m, DomBuilder t m, PostBuild t m, Reflex t)
+                     => Dynamic t T.Text
+                     -> Dynamic t T.Text
+                     -> m (Event t T.Text)
+editableTextDynClass txtDyn classDyn = mdo
   isEditableDyn <- foldDyn const False (fmapMaybe isEditable textBoxEvents)
 
   let mkElement isEditable =
@@ -43,9 +46,20 @@ editableText txtDyn = mdo
              cancelEv <- (CancelEditing <$) <$> button "Cancel"
              pure $ leftmost [confirmEv, cancelEv]
            else do
-             contentEl <- fst <$> elClass' "span" "editable-text" (dynText txtDyn)
+             contentEl <- fst <$> elDynClass' "span" classDyn (dynText txtDyn)
              pure $ MakeEditable <$ domEvent Click contentEl
 
   textBoxEvents <- switchHold never =<< dyn (mkElement <$> isEditableDyn)
 
   pure $ fmapMaybe textChanged textBoxEvents
+
+editableTextClass :: (MonadFix m, MonadHold t m, DomBuilder t m, PostBuild t m, Reflex t)
+                  => Dynamic t T.Text
+                  -> T.Text
+                  -> m (Event t T.Text)
+editableTextClass txtDyn classTxt = editableTextDynClass txtDyn (pure classTxt)
+
+editableText :: (MonadFix m, MonadHold t m, DomBuilder t m, PostBuild t m, Reflex t)
+             => Dynamic t T.Text
+             -> m (Event t T.Text)
+editableText txtDyn = editableTextClass txtDyn "editable-text"

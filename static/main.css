@@ -32,3 +32,24 @@ span.up-votes {
   color: red;
   font-weight: bold;
 }
+
+div.action-items {
+  margin-top: 10px;
+  padding: 10px;
+  background-color: #c0c8d0;
+}
+
+div.action-item {
+  background-color: #eaeaea;
+  padding: 10px;
+  margin-top: 5px;
+}
+
+.action-item span {
+  margin: 0 5px 0 5px;
+}
+
+span.completed-action-item {
+  text-decoration: line-through;
+}
+

@@ -21,7 +21,8 @@ library
                , text
   exposed-modules:
     Frontend
-  other-modules: Widget.Cards
+  other-modules: Widget.ActionItems
+               , Widget.Cards
                , Widget.Columns
                , Widget.Comments
                , Widget.EditableText

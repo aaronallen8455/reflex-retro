@@ -5,6 +5,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Frontend where
 
+import           Control.Lens
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.TH as Aeson
 import qualified Data.List.NonEmpty as NE
@@ -19,19 +20,23 @@ import           Reflex.Dom.Core
 
 import           Common.Route
 import qualified Widget.Columns as Columns
+import qualified Widget.ActionItems as ActionItems
 
 data FrontendState =
   FrontendState
     { _fsColumns :: M.Map Int Columns.ColumnState
+    , _fsActionItems :: M.Map Int ActionItems.ActionItemState
     }
 
+makeLenses ''FrontendState
 Aeson.deriveJSON Aeson.defaultOptions ''FrontendState
 
 initFrontendState :: FrontendState
-initFrontendState = FrontendState Columns.initColumns
+initFrontendState = FrontendState Columns.initColumns M.empty
 
 data FrontendEvent
   = ColEvent Columns.ColumnEvent
+  | ActionItemEvent ActionItems.ActionItemEvent
   | Replace FrontendState
 
 Aeson.deriveJSON Aeson.defaultOptions ''FrontendEvent
@@ -39,7 +44,9 @@ Aeson.deriveJSON Aeson.defaultOptions ''FrontendEvent
 applyFrontendEvent :: FrontendEvent -> FrontendState -> FrontendState
 applyFrontendEvent (Replace fs) _ = fs
 applyFrontendEvent (ColEvent ev) fs =
-  fs { _fsColumns = Columns.applyColumnEvent ev $ _fsColumns fs }
+  fs & fsColumns %~ Columns.applyColumnEvent ev
+applyFrontendEvent (ActionItemEvent ev) fs =
+  fs & fsActionItems %~ ActionItems.applyActionItemEvent ev
 
 frontend :: Frontend (R FrontendRoute)
 frontend = Frontend
@@ -72,12 +79,16 @@ frontend = Frontend
 
         let wsEvents = fmapMaybe Aeson.decodeStrict
                      $ _webSocket_recv ws
-            frontendEvents = leftmost [wsEvents, columnEvents]
+            frontendEvents = leftmost [wsEvents, columnEvents, actionItemEvents]
 
         stateDyn <- foldDyn applyFrontendEvent initFrontendState
                     frontendEvents
 
-        columnEvents <- fmap ColEvent <$> Columns.columnsWidget (_fsColumns <$> stateDyn)
+        columnEvents <- fmap ColEvent
+                    <$> Columns.columnsWidget (_fsColumns <$> stateDyn)
+
+        actionItemEvents <- fmap ActionItemEvent
+                        <$> ActionItems.actionItemsWidget (_fsActionItems <$> stateDyn)
 
         pure ()
 
