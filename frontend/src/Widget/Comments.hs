@@ -24,13 +24,14 @@ data CommentState =
     }
 
 makeLenses ''CommentState
-Aeson.deriveJSON Aeson.defaultOptions { Aeson.fieldLabelModifier = tail }
-                 ''CommentState
+Aeson.deriveJSON Aeson.defaultOptions ''CommentState
 
 data CommentEvent
   = AddComment T.Text
   | DeleteComment Int
   | EditComment Int T.Text
+
+Aeson.deriveJSON Aeson.defaultOptions ''CommentEvent
 
 applyCommentEvent :: CommentEvent -> M.Map Int CommentState -> M.Map Int CommentState
 applyCommentEvent (AddComment txt) comMap =

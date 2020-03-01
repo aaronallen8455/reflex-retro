@@ -6,7 +6,7 @@ import           Common.Route
 import qualified Control.Concurrent.MVar as MVar
 import           Control.Monad (forever)
 import           Control.Monad.Catch (finally)
-import           Control.Monad.IO.Class (liftIO)
+import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import           Data.Dependent.Sum
 import           Data.Foldable (traverse_)
@@ -14,14 +14,14 @@ import qualified Network.WebSockets as WS
 import           Network.WebSockets.Snap (runWebSocketsSnap)
 import           Obelisk.Backend
 
-import           Debug.Trace
+import           Frontend (FrontendEvent(Replace), FrontendState, applyFrontendEvent, initFrontendState)
 
 backend :: Backend BackendRoute FrontendRoute
 backend = Backend
   { _backend_run = \serve -> do
       clients <- MVar.newMVar [] :: IO (MVar.MVar ServerState)
       clientIdSeq <- MVar.newMVar $ ClientId 0
-      curFrontendState <- MVar.newMVar Nothing :: IO (MVar.MVar (Maybe BS.ByteString))
+      curFrontendState <- MVar.newMVar initFrontendState
       serve $ \r ->
         case r of
           BackendRoute_Missing  :=> _ -> pure ()
@@ -36,15 +36,14 @@ newtype ClientId =
 
 type ServerState = [(ClientId, WS.Connection)]
 
-websocketsServer :: MVar.MVar ServerState -> MVar.MVar ClientId -> MVar.MVar (Maybe BS.ByteString) -> WS.ServerApp
+websocketsServer :: MVar.MVar ServerState -> MVar.MVar ClientId -> MVar.MVar FrontendState -> WS.ServerApp
 websocketsServer serverState clientIdSeq frontendState pending = do
   clientId <- MVar.modifyMVar clientIdSeq (\x -> pure (succ x, x))
   conn <- WS.acceptRequest pending
   WS.forkPingThread conn 30
 
-  traceShow clientId pure ()
   MVar.withMVar frontendState $
-    maybe (pure ()) (WS.sendTextData conn)
+    WS.sendTextData conn . Aeson.encode . Replace
 
   -- add client to server state
   MVar.modifyMVar_ serverState (pure . ((clientId, conn) :))
@@ -55,8 +54,11 @@ websocketsServer serverState clientIdSeq frontendState pending = do
   _ <- flip finally disconnect . forever $ do
     -- forward received messages to the other clients
     msg <- WS.receiveData conn
-    traceShow msg pure ()
-    _ <- MVar.swapMVar frontendState (Just msg)
+
+    case Aeson.decodeStrict msg of
+      Just ev -> MVar.modifyMVar_ frontendState (pure . applyFrontendEvent ev)
+      Nothing -> pure ()
+
     broadcast serverState clientId msg
 
   pure ()

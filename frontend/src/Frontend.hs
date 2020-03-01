@@ -27,12 +27,17 @@ data FrontendState =
 
 Aeson.deriveJSON Aeson.defaultOptions ''FrontendState
 
+initFrontendState :: FrontendState
+initFrontendState = FrontendState Columns.initColumns
+
 data FrontendEvent
-  = WebSocketRecv FrontendState
-  | ColEvent Columns.ColumnEvent
+  = ColEvent Columns.ColumnEvent
+  | Replace FrontendState
+
+Aeson.deriveJSON Aeson.defaultOptions ''FrontendEvent
 
 applyFrontendEvent :: FrontendEvent -> FrontendState -> FrontendState
-applyFrontendEvent (WebSocketRecv fs) _ = fs
+applyFrontendEvent (Replace fs) _ = fs
 applyFrontendEvent (ColEvent ev) fs =
   fs { _fsColumns = Columns.applyColumnEvent ev $ _fsColumns fs }
 
@@ -58,17 +63,18 @@ frontend = Frontend
                 { URI.uriPath   = Just (False, pathPiece)
                 , URI.uriScheme = Just wsScheme
                 }
+
         -- will changes applied by the messages received be sent back to the server?
         ws <- case mbUri of
                 Just uri ->
-                  webSocket (URI.render uri) def { _webSocketConfig_send = pure . Aeson.encode <$> updated stateDyn }
+                  webSocket (URI.render uri) def { _webSocketConfig_send = pure . Aeson.encode <$> columnEvents }
                 Nothing -> error "failed to make websocket URI"
 
-        let wsEvents = fmapMaybe (fmap WebSocketRecv . Aeson.decodeStrict)
+        let wsEvents = fmapMaybe Aeson.decodeStrict
                      $ _webSocket_recv ws
             frontendEvents = leftmost [wsEvents, columnEvents]
 
-        stateDyn <- foldDyn applyFrontendEvent (FrontendState Columns.initColumns)
+        stateDyn <- foldDyn applyFrontendEvent initFrontendState
                     frontendEvents
 
         columnEvents <- fmap ColEvent <$> Columns.columnsWidget (_fsColumns <$> stateDyn)

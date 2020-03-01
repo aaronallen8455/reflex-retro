@@ -27,8 +27,7 @@ data CardState =
     }
 
 makeLenses ''CardState
-Aeson.deriveJSON Aeson.defaultOptions { Aeson.fieldLabelModifier = tail }
-                 ''CardState
+Aeson.deriveJSON Aeson.defaultOptions ''CardState
 
 data CardEvent
   = DeleteCard Int
@@ -37,6 +36,8 @@ data CardEvent
   | DownVote Int
   | ContentChange Int T.Text
   | CardCommentEvent Int Comments.CommentEvent
+
+Aeson.deriveJSON Aeson.defaultOptions ''CardEvent
 
 applyCardEvent :: CardEvent -> M.Map Int CardState -> M.Map Int CardState
 applyCardEvent (DeleteCard i) cardMap = M.delete i cardMap

@@ -27,14 +27,15 @@ data ColumnState =
     }
 
 makeLenses ''ColumnState
-Aeson.deriveJSON Aeson.defaultOptions { Aeson.fieldLabelModifier = tail }
-                 ''ColumnState
+Aeson.deriveJSON Aeson.defaultOptions ''ColumnState
 
 data ColumnEvent
   = DeleteColumn Int
   | AddColumn T.Text
   | ColCardEvent Int Cards.CardEvent
   | ChangeTitle Int T.Text
+
+Aeson.deriveJSON Aeson.defaultOptions ''ColumnEvent
 
 applyColumnEvent :: ColumnEvent -> M.Map Int ColumnState -> M.Map Int ColumnState
 applyColumnEvent (AddColumn colName) colMap
