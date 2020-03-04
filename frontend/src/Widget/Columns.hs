@@ -6,6 +6,7 @@ module Widget.Columns
   , columnsWidget
   , applyColumnEvent
   , initColumns
+  , isKeyEvent
   ) where
 
 import           Control.Lens
@@ -59,6 +60,11 @@ applyColumnEvent (ColCardEvent colId cardEvent) colMap
 applyColumnEvent (ChangeTitle colId newTitle) colMap
   | T.null newTitle = colMap
   | otherwise = M.adjust (colTitle .~ newTitle) colId colMap
+
+isKeyEvent :: ColumnEvent -> Bool
+isKeyEvent (AddColumn _) = True
+isKeyEvent (ColCardEvent _ ev) = Cards.isKeyEvent ev
+isKeyEvent _ = False
 
 columnsWidget :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m)
               => Dynamic t (M.Map Int ColumnState) -> m (Event t ColumnEvent)

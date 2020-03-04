@@ -6,6 +6,7 @@ module Widget.Cards
   , CardEvent
   , cardsWidget
   , applyCardEvent
+  , isKeyEvent
   ) where
 
 import           Control.Lens
@@ -71,6 +72,11 @@ applyCardEvent (ContentChange i newTxt) cardMap
   | otherwise = M.adjust (cardText .~ newTxt) i cardMap
 applyCardEvent (CardCommentEvent i ev) cardMap =
   M.adjust (cardComments %~ Comments.applyCommentEvent ev) i cardMap
+
+isKeyEvent :: CardEvent -> Bool
+isKeyEvent (AddCard _) = True
+isKeyEvent (CardCommentEvent _ ev) = Comments.isKeyEvent ev
+isKeyEvent _ = False
 
 cardsWidget :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m)
             => Dynamic t (M.Map Int CardState) -> m (Event t CardEvent)

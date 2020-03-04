@@ -5,6 +5,7 @@ module Widget.Comments
   , CommentEvent
   , commentsWidget
   , applyCommentEvent
+  , isKeyEvent
   ) where
 
 import           Control.Lens
@@ -49,6 +50,10 @@ applyCommentEvent (DeleteComment i) comMap =
 applyCommentEvent (EditComment i txt) comMap
   | T.null txt = comMap
   | otherwise = M.adjust (csContent .~ txt) i comMap
+
+isKeyEvent :: CommentEvent -> Bool
+isKeyEvent (AddComment _) = True
+isKeyEvent _ = False
 
 commentsWidget :: (DomBuilder t m, PostBuild t m, MonadHold t m, MonadFix m)
                => Dynamic t (M.Map Int CommentState) -> m (Event t CommentEvent)

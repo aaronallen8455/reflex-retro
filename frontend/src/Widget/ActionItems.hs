@@ -7,6 +7,7 @@ module Widget.ActionItems
   , ActionItems
   , applyActionItemEvent
   , actionItemsWidget
+  , isKeyEvent
   ) where
 
 import           Control.Lens
@@ -76,6 +77,10 @@ applyActionItemEvent (DeleteActionItem i) (ActionItems m) =
   ActionItems $ M.delete i m
 applyActionItemEvent (ChangeCompleted i b) (ActionItems m) =
   ActionItems $ M.adjust (aiCompleted .~ b) i m
+
+isKeyEvent :: ActionItemEvent -> Bool
+isKeyEvent (NewActionItem _) = True
+isKeyEvent _ = False
 
 actionItemsWidget :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m)
                   => Dynamic t ActionItems -> m (Event t ActionItemEvent)

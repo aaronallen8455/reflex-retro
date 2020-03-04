@@ -3,7 +3,15 @@
 {-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
-module Frontend where
+module Frontend
+  ( FrontendState
+  , FrontendEvent
+  , frontend
+  , initFrontendState
+  , mkReplaceEvent
+  , applyFrontendEvent
+  , isKeyEvent
+  ) where
 
 import           Control.Lens
 import           Control.Monad (void)
@@ -57,6 +65,17 @@ data FrontendEvent
 
 Aeson.deriveJSON Aeson.defaultOptions ''FrontendEvent
 
+isKeyEvent :: FrontendEvent -> Bool
+isKeyEvent (ColEvent ev) = Columns.isKeyEvent ev
+isKeyEvent (ActionItemEvent ev) = ActionItems.isKeyEvent ev
+isKeyEvent _ = False
+
+mkReplaceEvent :: FrontendState -> FrontendEvent
+mkReplaceEvent = Replace
+
+applyFrontendEvents :: NE.NonEmpty FrontendEvent -> FrontendState -> FrontendState
+applyFrontendEvents = flip (foldr applyFrontendEvent)
+
 applyFrontendEvent :: FrontendEvent -> FrontendState -> FrontendState
 applyFrontendEvent (Replace fs) _ = fs
 applyFrontendEvent (ColEvent ev) fs =
@@ -92,20 +111,26 @@ frontend = Frontend
 
         ws <- case mbUri of
                 Just uri ->
-                  webSocket (URI.render uri) def { _webSocketConfig_send = pure . Aeson.encode <$> columnEvents }
+                  webSocket (URI.render uri) def { _webSocketConfig_send = pure . Aeson.encode <$> outboundWSEvents }
                 Nothing -> error "failed to make websocket URI"
 
         let wsEvents = fmapMaybe Aeson.decodeStrict
                      $ _webSocket_recv ws
 
+            -- TODO certain events should trigger a full update of the client
             -- TODO make so events can be batched?
-            frontendEvents = leftmost [ wsEvents
-                                      , editTitleEv
-                                      , columnEvents
-                                      , actionItemEvents
-                                      ]
+            frontendEvents = mergeList [ wsEvents
+                                       , editTitleEv
+                                       , columnEvents
+                                       , actionItemEvents
+                                       ]
 
-        stateDyn <- foldDyn applyFrontendEvent initFrontendState
+            outboundWSEvents = leftmost [ editTitleEv
+                                        , columnEvents
+                                        , actionItemEvents
+                                        ]
+
+        stateDyn <- foldDyn applyFrontendEvents initFrontendState
                     frontendEvents
 
         editTitleEv

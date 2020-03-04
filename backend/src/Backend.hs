@@ -14,14 +14,14 @@ import qualified Network.WebSockets as WS
 import           Network.WebSockets.Snap (runWebSocketsSnap)
 import           Obelisk.Backend
 
-import           Frontend (FrontendEvent(Replace), FrontendState, applyFrontendEvent, initFrontendState)
+import qualified Frontend as Frontend
 
 backend :: Backend BackendRoute FrontendRoute
 backend = Backend
   { _backend_run = \serve -> do
       clients <- MVar.newMVar [] :: IO (MVar.MVar ServerState)
       clientIdSeq <- MVar.newMVar $ ClientId 0
-      curFrontendState <- MVar.newMVar initFrontendState
+      curFrontendState <- MVar.newMVar Frontend.initFrontendState
       serve $ \r ->
         case r of
           BackendRoute_Missing  :=> _ -> pure ()
@@ -36,14 +36,14 @@ newtype ClientId =
 
 type ServerState = [(ClientId, WS.Connection)]
 
-websocketsServer :: MVar.MVar ServerState -> MVar.MVar ClientId -> MVar.MVar FrontendState -> WS.ServerApp
+websocketsServer :: MVar.MVar ServerState -> MVar.MVar ClientId -> MVar.MVar Frontend.FrontendState -> WS.ServerApp
 websocketsServer serverState clientIdSeq frontendState pending = do
   clientId <- MVar.modifyMVar clientIdSeq (\x -> pure (succ x, x))
   conn <- WS.acceptRequest pending
   WS.forkPingThread conn 30
 
   MVar.withMVar frontendState $
-    WS.sendTextData conn . Aeson.encode . Replace
+    WS.sendTextData conn . Aeson.encode . Frontend.mkReplaceEvent
 
   -- add client to server state
   MVar.modifyMVar_ serverState (pure . ((clientId, conn) :))
@@ -55,8 +55,19 @@ websocketsServer serverState clientIdSeq frontendState pending = do
     -- forward received messages to the other clients
     msg <- WS.receiveData conn
 
+    -- apply the event to the server's frontend model
     case Aeson.decodeStrict msg of
-      Just ev -> MVar.modifyMVar_ frontendState (pure . applyFrontendEvent ev)
+      Just ev -> MVar.modifyMVar_ frontendState $ \fe -> do
+        let newFrontend = Frontend.applyFrontendEvent ev fe
+        -- send full sync to client on key events
+        if Frontend.isKeyEvent ev
+           then WS.sendTextData
+                  conn
+                  (Aeson.encode $ Frontend.mkReplaceEvent newFrontend)
+           else pure ()
+
+        pure newFrontend
+
       Nothing -> pure ()
 
     broadcast serverState clientId msg
@@ -69,3 +80,4 @@ broadcast serverState senderId msg = do
          <$> MVar.readMVar serverState
 
   traverse_ (flip WS.sendTextData msg) clients
+
