@@ -23,22 +23,25 @@ textChanged :: TextBoxEv -> Maybe T.Text
 textChanged (DoneEditing txt) = Just txt
 textChanged _                 = Nothing
 
-isEditable :: TextBoxEv -> Maybe Bool
-isEditable MakeEditable  = Just True
-isEditable _             = Just False
+isEditable :: TextBoxEv -> Bool
+isEditable MakeEditable  = True
+isEditable _             = False
 
 editableTextDynClass :: (MonadFix m, MonadHold t m, DomBuilder t m, PostBuild t m, Reflex t)
                      => Dynamic t T.Text
                      -> Dynamic t T.Text
                      -> m (Event t T.Text)
 editableTextDynClass txtDyn classDyn = mdo
-  isEditableDyn <- foldDyn const False (fmapMaybe isEditable textBoxEvents)
+  isEditableDyn <- foldDyn const False (isEditable <$> textBoxEvents)
 
   let mkElement editable =
         if editable
            then do
              initVal <- sample $ current txtDyn
-             inp <- inputElement def { _inputElementConfig_initialValue = initVal }
+
+             inp <- inputElement
+                      def { _inputElementConfig_initialValue = initVal }
+
              let inpValue = _inputElement_value inp
 
              confirmEv <- fmap DoneEditing
@@ -46,6 +49,7 @@ editableTextDynClass txtDyn classDyn = mdo
                       <$> simpleButton "Ok"
 
              cancelEv <- (CancelEditing <$) <$> simpleButton "Cancel"
+
              pure $ leftmost [confirmEv, cancelEv]
            else do
              contentEl <- fst <$> elDynClass' "span" classDyn (dynText txtDyn)

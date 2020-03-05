@@ -26,7 +26,9 @@ library
                , Widget.Columns
                , Widget.Comments
                , Widget.EditableText
+               , Widget.Main
                , Widget.SimpleButton
+               , WebSocket
   ghc-options: -Wall
 
 executable frontend
