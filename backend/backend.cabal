@@ -11,9 +11,11 @@ library
                , base
                , bytestring
                , common
+               , containers
                , dependent-sum
                , exceptions
                , frontend
+               , lens
                , obelisk-backend
                , obelisk-route
                , websockets-snap

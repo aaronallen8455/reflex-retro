@@ -21,7 +21,7 @@ import           Reflex.Dom.Core
 import           Common.Markdown (ToMarkdown(..))
 import qualified Widget.Cards as Cards
 import           Widget.EditableText (editableText)
-import           Widget.SimpleButton (simpleButton)
+import           Widget.SimpleButton (buttonClass, simpleButton)
 
 data ColumnState =
   ColumnState
@@ -88,7 +88,7 @@ columnWidget colId colStateDyn = elClass "div" "column" $ do
     <- (fmap . fmap) (ChangeTitle colId)
      . el "h3" $ editableText (_colTitle <$> colStateDyn)
 
-  deleteColumnEv <- (DeleteColumn colId <$) <$> simpleButton "X"
+  deleteColumnEv <- (DeleteColumn colId <$) <$> buttonClass "delete-button" "X"
 
   cardWidgetEvents <- Cards.cardsWidget $ _colCards <$> colStateDyn
 

@@ -22,7 +22,7 @@ import           Reflex.Dom.Core
 import           Common.Markdown (ToMarkdown(..))
 import qualified Widget.Comments as Comments
 import           Widget.EditableText (editableText)
-import           Widget.SimpleButton (simpleButton)
+import           Widget.SimpleButton (buttonClass, simpleButton)
 
 data CardState =
   CardState
@@ -102,7 +102,7 @@ cardWidget cardId cardStateDyn = elClass "div" "card" $ do
   elClass "span" "up-votes" . dynText
     $ T.pack . show . _cardLikes <$> cardStateDyn
 
-  deleteCardEv <- (DeleteCard cardId <$) <$> simpleButton "x"
+  deleteCardEv <- (DeleteCard cardId <$) <$> buttonClass "delete-button" "X"
   upVoteCardEv <- (UpVote cardId <$) <$> simpleButton "+1"
   downVoteCardEv <- (DownVote cardId <$) <$> simpleButton "-1"
 

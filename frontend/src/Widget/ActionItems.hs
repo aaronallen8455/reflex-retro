@@ -22,7 +22,7 @@ import           Reflex.Dom.Core
 
 import           Common.Markdown (ToMarkdown(..))
 import           Widget.EditableText (editableTextDynClass)
-import           Widget.SimpleButton (simpleButton)
+import           Widget.SimpleButton (buttonClass, simpleButton)
 
 data ActionItemState =
   ActionItemState
@@ -120,7 +120,7 @@ actionItemWidget aiId aiStateDyn = divClass "action-item" $ do
    <$> editableTextDynClass (_aiContent <$> aiStateDyn)
                             (completedClass . _aiCompleted <$> aiStateDyn)
 
-  deletedEv <- (DeleteActionItem aiId <$) <$> simpleButton "X"
+  deletedEv <- (DeleteActionItem aiId <$) <$> buttonClass "delete-button" "X"
 
   pure $ leftmost [contentChangedEv, completedEv, deletedEv]
 

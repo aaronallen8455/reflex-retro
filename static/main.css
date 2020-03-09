@@ -11,12 +11,18 @@ div.column {
   margin: 5px 10px 5px 0;
   padding: 0 5px 5px 5px;
   width: 350px;
+  position: relative;
 }
 
 div.card {
   background: rgb(179, 243, 202);
   margin: 5px 0 0 0;
   padding: 5px;
+  position: relative;
+}
+
+div.card-content {
+  margin: 8px 0 8px 0
 }
 
 div.comments {
@@ -26,6 +32,7 @@ div.comment {
   background-color: #eeda90;
   border-top: solid 1px #e0a733;
   padding: 5px;
+  position: relative;
 }
 
 span.up-votes {
@@ -43,6 +50,7 @@ div.action-item {
   background-color: #eaeaea;
   padding: 10px;
   margin-top: 5px;
+  position: relative;
 }
 
 .action-item span {
@@ -51,5 +59,11 @@ div.action-item {
 
 span.completed-action-item {
   text-decoration: line-through;
+}
+
+button.delete-button {
+  position: absolute;
+  top: 3px;
+  right: 3px;
 }
 

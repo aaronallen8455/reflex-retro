@@ -19,7 +19,7 @@ import           Reflex.Dom.Core
 
 import           Common.Markdown (ToMarkdown(..))
 import           Widget.EditableText (editableText)
-import           Widget.SimpleButton (simpleButton)
+import           Widget.SimpleButton (buttonClass, simpleButton)
 
 data CommentState =
   CommentState
@@ -77,6 +77,6 @@ commentWidget comId comStateDyn = divClass "comment" $ do
              . (fmap . fmap) (EditComment comId)
              $ editableText (_csContent <$> comStateDyn)
 
-  deleteComEv <- (DeleteComment comId <$) <$> simpleButton "X"
+  deleteComEv <- (DeleteComment comId <$) <$> buttonClass "delete-button" "X"
 
   pure $ leftmost [editComEv, deleteComEv]

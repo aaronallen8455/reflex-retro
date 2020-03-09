@@ -1,83 +1,113 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module Backend where
+{-# LANGUAGE TemplateHaskell #-}
+module Backend
+  ( backend
+  ) where
 
 import           Common.Route
-import qualified Control.Concurrent.MVar as MVar
+import           Control.Concurrent.MVar (MVar, modifyMVar, modifyMVar_, newMVar)
+import           Control.Lens
 import           Control.Monad (forever)
 import           Control.Monad.Catch (finally)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import           Data.Dependent.Sum
 import           Data.Foldable (traverse_)
+import qualified Data.Map as M
 import qualified Network.WebSockets as WS
 import           Network.WebSockets.Snap (runWebSocketsSnap)
 import           Obelisk.Backend
 
 import qualified Frontend as Frontend
 
+newtype ClientId =
+  ClientId Int
+  deriving (Show, Eq, Enum, Ord)
+
+data ServerState =
+  ServerState
+    { _ssClients       :: M.Map ClientId WS.Connection
+    , _ssClientIdSeq   :: ClientId
+    , _ssFrontendState :: Frontend.FrontendState
+    }
+
+makeLenses ''ServerState
+
 backend :: Backend BackendRoute FrontendRoute
 backend = Backend
   { _backend_run = \serve -> do
-      clients <- MVar.newMVar [] :: IO (MVar.MVar ServerState)
-      clientIdSeq <- MVar.newMVar $ ClientId 0
-      curFrontendState <- MVar.newMVar Frontend.initFrontendState
+      stateMVar
+        <- newMVar ServerState
+             { _ssClients = M.empty
+             , _ssClientIdSeq = ClientId 0
+             , _ssFrontendState = Frontend.initFrontendState
+             }
+
       serve $ \r ->
         case r of
-          BackendRoute_Missing  :=> _ -> pure ()
+          BackendRoute_Missing :=> _   -> pure ()
           BackendRoute_WebSocket :=> _ -> do
-            runWebSocketsSnap $ websocketsServer clients clientIdSeq curFrontendState
+            runWebSocketsSnap $ websocketsServer stateMVar
   , _backend_routeEncoder = fullRouteEncoder
   }
 
-newtype ClientId =
-  ClientId Int
-  deriving (Show, Eq, Enum)
+websocketsServer :: MVar ServerState -> WS.ServerApp
+websocketsServer serverState pending = do
+  (clientId, conn) <- addClient serverState pending
 
-type ServerState = [(ClientId, WS.Connection)]
+  let disconnect = modifyMVar_ serverState
+                               (pure . (ssClients . at clientId .~ Nothing))
 
-websocketsServer :: MVar.MVar ServerState -> MVar.MVar ClientId -> MVar.MVar Frontend.FrontendState -> WS.ServerApp
-websocketsServer serverState clientIdSeq frontendState pending = do
-  clientId <- MVar.modifyMVar clientIdSeq (\x -> pure (succ x, x))
-  conn <- WS.acceptRequest pending
-  WS.forkPingThread conn 30
-
-  MVar.withMVar frontendState $
-    WS.sendTextData conn . Aeson.encode . Frontend.mkReplaceEvent
-
-  -- add client to server state
-  MVar.modifyMVar_ serverState (pure . ((clientId, conn) :))
-
-  let disconnect = MVar.modifyMVar_ serverState
-                                    (pure . filter ((/= clientId) . fst))
-
-  _ <- flip finally disconnect . forever $ do
-    -- forward received messages to the other clients
-    msg <- WS.receiveData conn
-
-    -- apply the event to the server's frontend model
-    case Aeson.decodeStrict msg of
-      Just ev -> MVar.modifyMVar_ frontendState $ \fe -> do
-        let newFrontend = Frontend.applyFrontendEvent ev fe
-        -- send full sync to client on key events
-        if Frontend.isKeyEvent ev
-           then WS.sendTextData
-                  conn
-                  (Aeson.encode $ Frontend.mkReplaceEvent newFrontend)
-           else pure ()
-
-        pure newFrontend
-
-      Nothing -> pure ()
-
-    broadcast serverState clientId msg
+  _ <- flip finally disconnect . forever
+     $ talkToClient serverState clientId conn
 
   pure ()
 
-broadcast :: MVar.MVar ServerState -> ClientId -> BS.ByteString -> IO ()
-broadcast serverState senderId msg = do
-  clients <- map snd . filter ((/= senderId) . fst)
-         <$> MVar.readMVar serverState
+addClient :: MVar ServerState -> WS.PendingConnection -> IO (ClientId, WS.Connection)
+addClient serverState pending = do
+  modifyMVar serverState $ \s -> do
+    conn <- WS.acceptRequest pending
+    WS.forkPingThread conn 30
 
-  traverse_ (flip WS.sendTextData msg) clients
+    WS.sendTextData conn . Aeson.encode
+                         . Frontend.mkReplaceEvent
+                         $ _ssFrontendState s
+
+    let clientId = _ssClientIdSeq s
+
+    pure $ ( s & ssClientIdSeq %~ succ
+               & ssClients . at clientId ?~ conn
+           , (clientId, conn)
+           )
+
+talkToClient :: MVar ServerState -> ClientId -> WS.Connection -> IO ()
+talkToClient serverState clientId conn = do
+  -- forward received messages to the other clients
+  msg <- WS.receiveData conn
+
+  -- apply the event to the server's frontend model
+  case Aeson.decodeStrict msg of
+    Just ev -> modifyMVar_ serverState $ \s -> do
+      let (newFrontend, newState) =
+            s & ssFrontendState <%~ Frontend.applyFrontendEvent ev
+
+      -- send full sync to client on key events
+      if Frontend.isKeyEvent ev
+         then WS.sendTextData
+                conn
+                (Aeson.encode $ Frontend.mkReplaceEvent newFrontend)
+         else pure ()
+
+      -- send message to other clients
+      broadcast newState clientId msg
+
+      pure newState
+
+    Nothing -> pure ()
+
+broadcast :: ServerState -> ClientId -> BS.ByteString -> IO ()
+broadcast serverState senderId msg =
+  let clients = M.delete senderId $ _ssClients serverState
+   in traverse_ (flip WS.sendTextData msg) clients
 
