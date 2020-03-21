@@ -1,10 +1,10 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Widget.Comments
-  ( CommentState
-  , CommentEvent
-  , commentsWidget
-  , applyCommentEvent
+  ( Model
+  , Ev
+  , widget
+  , applyEvent
   , isKeyEvent
   ) where
 
@@ -21,43 +21,43 @@ import           Common.Markdown (ToMarkdown(..))
 import           Widget.EditableText (editableText)
 import           Widget.SimpleButton (buttonClass, simpleButton)
 
-data CommentState =
-  CommentState
+data Model =
+  Model
     { _csContent :: T.Text
     } deriving (Show, Eq)
 
-makeLenses ''CommentState
-Aeson.deriveJSON Aeson.defaultOptions ''CommentState
+makeLenses ''Model
+Aeson.deriveJSON Aeson.defaultOptions ''Model
 
-instance ToMarkdown CommentState where
+instance ToMarkdown Model where
   toMarkdown = _csContent
 
-data CommentEvent
+data Ev
   = AddComment T.Text
   | DeleteComment Int
   | EditComment Int T.Text
 
-Aeson.deriveJSON Aeson.defaultOptions ''CommentEvent
+Aeson.deriveJSON Aeson.defaultOptions ''Ev
 
-applyCommentEvent :: CommentEvent -> M.Map Int CommentState -> M.Map Int CommentState
-applyCommentEvent (AddComment txt) comMap
+applyEvent :: Ev -> M.Map Int Model -> M.Map Int Model
+applyEvent (AddComment txt) comMap
   | T.null txt = comMap
   | otherwise =
       let nxtId = maybe 0 (succ . fst) $ M.lookupMax comMap
-       in M.insert nxtId (CommentState txt) comMap
-applyCommentEvent (DeleteComment i) comMap =
+       in M.insert nxtId (Model txt) comMap
+applyEvent (DeleteComment i) comMap =
   M.delete i comMap
-applyCommentEvent (EditComment i txt) comMap
+applyEvent (EditComment i txt) comMap
   | T.null txt = comMap
   | otherwise = M.adjust (csContent .~ txt) i comMap
 
-isKeyEvent :: CommentEvent -> Bool
+isKeyEvent :: Ev -> Bool
 isKeyEvent (AddComment _) = True
 isKeyEvent _ = False
 
-commentsWidget :: (DomBuilder t m, PostBuild t m, MonadHold t m, MonadFix m)
-               => Dynamic t (M.Map Int CommentState) -> m (Event t CommentEvent)
-commentsWidget comMapDyn = divClass "comments" $ do
+widget :: (DomBuilder t m, PostBuild t m, MonadHold t m, MonadFix m)
+       => Dynamic t (M.Map Int Model) -> m (Event t Ev)
+widget comMapDyn = divClass "comments" $ do
   addCommentInputDyn <- _inputElement_value <$> inputElement def
   addCommentClickEv  <- simpleButton "Add Comment"
 
@@ -71,7 +71,7 @@ commentsWidget comMapDyn = divClass "comments" $ do
   pure $ leftmost [addCardEv, commentWidgetEvents]
 
 commentWidget :: (MonadFix m, DomBuilder t m, MonadHold t m, PostBuild t m)
-              => Int -> Dynamic t CommentState -> m (Event t CommentEvent)
+              => Int -> Dynamic t Model -> m (Event t Ev)
 commentWidget comId comStateDyn = divClass "comment" $ do
   editComEv <- elClass "div" "comment-content"
              . (fmap . fmap) (EditComment comId)

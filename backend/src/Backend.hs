@@ -29,7 +29,7 @@ data ServerState =
   ServerState
     { _ssClients       :: M.Map ClientId WS.Connection
     , _ssClientIdSeq   :: ClientId
-    , _ssFrontendState :: Frontend.FrontendState
+    , _ssFrontendState :: Frontend.Model
     }
 
 makeLenses ''ServerState
@@ -41,7 +41,7 @@ backend = Backend
         <- newMVar ServerState
              { _ssClients = M.empty
              , _ssClientIdSeq = ClientId 0
-             , _ssFrontendState = Frontend.initFrontendState
+             , _ssFrontendState = Frontend.initModel
              }
 
       serve $ \r ->
@@ -90,7 +90,7 @@ talkToClient serverState clientId conn = do
   case Aeson.decodeStrict msg of
     Just ev -> modifyMVar_ serverState $ \s -> do
       let (newFrontend, newState) =
-            s & ssFrontendState <%~ Frontend.applyFrontendEvent ev
+            s & ssFrontendState <%~ Frontend.applyEvent ev
 
       -- send full sync to client on key events
       if Frontend.isKeyEvent ev

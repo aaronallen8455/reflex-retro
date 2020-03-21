@@ -2,10 +2,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Widget.Cards
-  ( CardState
-  , CardEvent
-  , cardsWidget
-  , applyCardEvent
+  ( Model
+  , Ev
+  , widget
+  , applyEvent
   , isKeyEvent
   ) where
 
@@ -24,17 +24,17 @@ import qualified Widget.Comments as Comments
 import           Widget.EditableText (editableText)
 import           Widget.SimpleButton (buttonClass, simpleButton)
 
-data CardState =
-  CardState
+data Model =
+  Model
     { _cardText     :: T.Text
     , _cardLikes    :: Int
-    , _cardComments :: M.Map Int Comments.CommentState
+    , _cardComments :: M.Map Int Comments.Model
     } deriving (Show, Eq)
 
-makeLenses ''CardState
-Aeson.deriveJSON Aeson.defaultOptions ''CardState
+makeLenses ''Model
+Aeson.deriveJSON Aeson.defaultOptions ''Model
 
-instance ToMarkdown CardState where
+instance ToMarkdown Model where
   toMarkdown cs =
     T.unlines
       $ "(" <> likes <> ") " <> _cardText cs
@@ -46,41 +46,41 @@ instance ToMarkdown CardState where
             where
               likeTxt = T.pack . show $ _cardLikes cs
 
-data CardEvent
+data Ev
   = DeleteCard Int
   | AddCard T.Text
   | UpVote Int
   | DownVote Int
   | ContentChange Int T.Text
-  | CardCommentEvent Int Comments.CommentEvent
+  | CardCommentEvent Int Comments.Ev
 
-Aeson.deriveJSON Aeson.defaultOptions ''CardEvent
+Aeson.deriveJSON Aeson.defaultOptions ''Ev
 
-applyCardEvent :: CardEvent -> M.Map Int CardState -> M.Map Int CardState
-applyCardEvent (DeleteCard i) cardMap = M.delete i cardMap
-applyCardEvent (AddCard txt) cardMap
+applyEvent :: Ev -> M.Map Int Model -> M.Map Int Model
+applyEvent (DeleteCard i) cardMap = M.delete i cardMap
+applyEvent (AddCard txt) cardMap
   | T.null txt = cardMap
   | otherwise =
       let nxt = maybe 0 (succ . fst) $ M.lookupMax cardMap
-       in M.insert nxt (CardState txt 0 M.empty) cardMap
-applyCardEvent (UpVote i) cardMap =
+       in M.insert nxt (Model txt 0 M.empty) cardMap
+applyEvent (UpVote i) cardMap =
   M.adjust (cardLikes +~ 1) i cardMap
-applyCardEvent (DownVote i) cardMap =
+applyEvent (DownVote i) cardMap =
   M.adjust (cardLikes -~ 1) i cardMap
-applyCardEvent (ContentChange i newTxt) cardMap
+applyEvent (ContentChange i newTxt) cardMap
   | T.null newTxt = cardMap
   | otherwise = M.adjust (cardText .~ newTxt) i cardMap
-applyCardEvent (CardCommentEvent i ev) cardMap =
-  M.adjust (cardComments %~ Comments.applyCommentEvent ev) i cardMap
+applyEvent (CardCommentEvent i ev) cardMap =
+  M.adjust (cardComments %~ Comments.applyEvent ev) i cardMap
 
-isKeyEvent :: CardEvent -> Bool
+isKeyEvent :: Ev -> Bool
 isKeyEvent (AddCard _) = True
 isKeyEvent (CardCommentEvent _ ev) = Comments.isKeyEvent ev
 isKeyEvent _ = False
 
-cardsWidget :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m)
-            => Dynamic t (M.Map Int CardState) -> m (Event t CardEvent)
-cardsWidget cardMapDyn = do
+widget :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m)
+       => Dynamic t (M.Map Int Model) -> m (Event t Ev)
+widget cardMapDyn = do
   addCardInputDyn <- _inputElement_value <$> inputElement def
   addCardClickEv  <- simpleButton "Add Card"
 
@@ -94,7 +94,7 @@ cardsWidget cardMapDyn = do
   pure $ leftmost [addCardEv, cardWidgetEvents]
 
 cardWidget :: (PostBuild t m, DomBuilder t m, MonadHold t m, MonadFix m)
-           => Int -> Dynamic t CardState -> m (Event t CardEvent)
+           => Int -> Dynamic t Model -> m (Event t Ev)
 cardWidget cardId cardStateDyn = elClass "div" "card" $ do
   contentChangeEv
     <- (fmap . fmap) (ContentChange cardId)
@@ -107,7 +107,7 @@ cardWidget cardId cardStateDyn = elClass "div" "card" $ do
   downVoteCardEv <- (DownVote cardId <$) <$> simpleButton "-1"
 
   commentEvents <- fmap (CardCommentEvent cardId)
-               <$> Comments.commentsWidget (_cardComments <$> cardStateDyn)
+               <$> Comments.widget (_cardComments <$> cardStateDyn)
 
   pure $ leftmost [ contentChangeEv
                   , deleteCardEv

@@ -2,11 +2,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Widget.ActionItems
-  ( ActionItemState
-  , ActionItemEvent
-  , ActionItems
-  , applyActionItemEvent
-  , actionItemsWidget
+  ( Ev
+  , Model
+  , applyEvent
+  , widget
   , isKeyEvent
   ) where
 
@@ -40,51 +39,51 @@ instance ToMarkdown ActionItemState where
                      then "**(Completed)** "
                      else ""
 
-data ActionItemEvent
+data Ev
   = NewActionItem T.Text
   | ContentChange Int T.Text
   | DeleteActionItem Int
   | ChangeCompleted Int Bool
 
-Aeson.deriveJSON Aeson.defaultOptions ''ActionItemEvent
+Aeson.deriveJSON Aeson.defaultOptions ''Ev
 
-newtype ActionItems =
-  ActionItems
+newtype Model =
+  Model
     { getActionItems :: M.Map Int ActionItemState
     } deriving (Show, Eq, Aeson.FromJSON, Aeson.ToJSON, Semigroup, Monoid)
 
-instance ToMarkdown ActionItems where
-  toMarkdown (ActionItems actionItemMap) =
+instance ToMarkdown Model where
+  toMarkdown (Model actionItemMap) =
     T.unlines $
       [ "### Action Items"
       , ""
       ] <> map (\(n, i) -> T.pack (show n) <> ". " <> toMarkdown i)
                ([1 :: Int ..] `zip` M.elems actionItemMap)
 
-applyActionItemEvent :: ActionItemEvent
-                     -> ActionItems
-                     -> ActionItems
-applyActionItemEvent (NewActionItem txt) ai@(ActionItems m)
+applyEvent :: Ev
+           -> Model
+           -> Model
+applyEvent (NewActionItem txt) ai@(Model m)
   | not $ T.null txt =
     let idx = maybe 0 (succ . fst) $ M.lookupMax m
-     in ActionItems $ M.insert idx (ActionItemState txt False) m
+     in Model $ M.insert idx (ActionItemState txt False) m
   | otherwise = ai
-applyActionItemEvent (ContentChange i txt) ai@(ActionItems m)
+applyEvent (ContentChange i txt) ai@(Model m)
   | not $ T.null txt =
-    ActionItems $ M.adjust (aiContent .~ txt) i m
+    Model $ M.adjust (aiContent .~ txt) i m
   | otherwise = ai
-applyActionItemEvent (DeleteActionItem i) (ActionItems m) =
-  ActionItems $ M.delete i m
-applyActionItemEvent (ChangeCompleted i b) (ActionItems m) =
-  ActionItems $ M.adjust (aiCompleted .~ b) i m
+applyEvent (DeleteActionItem i) (Model m) =
+  Model $ M.delete i m
+applyEvent (ChangeCompleted i b) (Model m) =
+  Model $ M.adjust (aiCompleted .~ b) i m
 
-isKeyEvent :: ActionItemEvent -> Bool
+isKeyEvent :: Ev -> Bool
 isKeyEvent (NewActionItem _) = True
 isKeyEvent _ = False
 
-actionItemsWidget :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m)
-                  => Dynamic t ActionItems -> m (Event t ActionItemEvent)
-actionItemsWidget aiStatesDyn = divClass "action-items" $ do
+widget :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m)
+       => Dynamic t Model -> m (Event t Ev)
+widget aiStatesDyn = divClass "action-items" $ do
   el "h3" $ text "Action Items"
 
   addActionItemDyn <- _inputElement_value <$> inputElement def
@@ -101,7 +100,7 @@ actionItemsWidget aiStatesDyn = divClass "action-items" $ do
   pure $ leftmost [addActionItemEv, actionItemsEv]
 
 actionItemWidget :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m)
-                 => Int -> Dynamic t ActionItemState -> m (Event t ActionItemEvent)
+                 => Int -> Dynamic t ActionItemState -> m (Event t Ev)
 actionItemWidget aiId aiStateDyn = divClass "action-item" $ do
   initChecked <- sample . current $ _aiCompleted <$> aiStateDyn
   completedCheckBox <- inputElement $ def

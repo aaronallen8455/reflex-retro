@@ -2,14 +2,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
 module Widget.Main
-  ( FrontendState
-  , FrontendEvent
-  , initFrontendState
+  ( Model
+  , Ev
+  , initModel
   , isKeyEvent
   , mkReplaceEvent
-  , applyFrontendEvents
-  , applyFrontendEvent
-  , frontendWidget
+  , applyEvents
+  , applyEvent
+  , widget
   ) where
 
 import           Control.Lens
@@ -31,67 +31,67 @@ import qualified Widget.Columns as Columns
 import           Widget.EditableText (editableText)
 import           Widget.SimpleButton (simpleButton)
 
-data FrontendState =
-  FrontendState
-    { _fsColumns     :: M.Map Int Columns.ColumnState
-    , _fsActionItems :: ActionItems.ActionItems
+data Model =
+  Model
+    { _fsColumns     :: M.Map Int Columns.Model
+    , _fsActionItems :: ActionItems.Model
     , _fsTitle       :: T.Text
     }
 
-makeLenses ''FrontendState
-Aeson.deriveJSON Aeson.defaultOptions ''FrontendState
+makeLenses ''Model
+Aeson.deriveJSON Aeson.defaultOptions ''Model
 
-instance ToMarkdown FrontendState where
+instance ToMarkdown Model where
   toMarkdown fs =
     T.unlines
       $ "# " <> _fsTitle fs
       : toMarkdown (_fsActionItems fs)
       : map toMarkdown (M.elems $ _fsColumns fs)
 
-initFrontendState :: FrontendState
-initFrontendState = FrontendState Columns.initColumns mempty "Retro"
+initModel :: Model
+initModel = Model Columns.initColumns mempty "Retro"
 
-data FrontendEvent
-  = ColEvent Columns.ColumnEvent
-  | ActionItemEvent ActionItems.ActionItemEvent
-  | Replace FrontendState
+data Ev
+  = ColEvent Columns.Ev
+  | ActionItemEvent ActionItems.Ev
+  | Replace Model
   | ChangeTitle T.Text
 
-Aeson.deriveJSON Aeson.defaultOptions ''FrontendEvent
+Aeson.deriveJSON Aeson.defaultOptions ''Ev
 
-isKeyEvent :: FrontendEvent -> Bool
+isKeyEvent :: Ev -> Bool
 isKeyEvent (ColEvent ev) = Columns.isKeyEvent ev
 isKeyEvent (ActionItemEvent ev) = ActionItems.isKeyEvent ev
 isKeyEvent _ = False
 
-mkReplaceEvent :: FrontendState -> FrontendEvent
+mkReplaceEvent :: Model -> Ev
 mkReplaceEvent = Replace
 
-applyFrontendEvents :: NE.NonEmpty FrontendEvent -> FrontendState -> FrontendState
-applyFrontendEvents = flip (foldr applyFrontendEvent)
+applyEvents :: NE.NonEmpty Ev -> Model -> Model
+applyEvents = flip (foldr applyEvent)
 
-applyFrontendEvent :: FrontendEvent -> FrontendState -> FrontendState
-applyFrontendEvent (Replace fs) _ = fs
-applyFrontendEvent (ColEvent ev) fs =
-  fs & fsColumns %~ Columns.applyColumnEvent ev
-applyFrontendEvent (ActionItemEvent ev) fs =
-  fs & fsActionItems %~ ActionItems.applyActionItemEvent ev
-applyFrontendEvent (ChangeTitle txt) fs
+applyEvent :: Ev -> Model -> Model
+applyEvent (Replace fs) _ = fs
+applyEvent (ColEvent ev) fs =
+  fs & fsColumns %~ Columns.applyEvent ev
+applyEvent (ActionItemEvent ev) fs =
+  fs & fsActionItems %~ ActionItems.applyEvent ev
+applyEvent (ChangeTitle txt) fs
   | not $ T.null txt = fs & fsTitle .~ txt
   | otherwise = fs
 
-frontendWidget :: ( DomBuilder t m, PostBuild t m, PerformEvent t m, JS.MonadJSM (Performable m), MonadHold t m, MonadFix m)
-               => Dynamic t FrontendState -> m (Event t FrontendEvent)
-frontendWidget stateDyn = do
+widget :: ( DomBuilder t m, PostBuild t m, PerformEvent t m, JS.MonadJSM (Performable m), MonadHold t m, MonadFix m)
+       => Dynamic t Model -> m (Event t Ev)
+widget stateDyn = do
   editTitleEv
     <- fmap ChangeTitle
    <$> elClass "h2" "title" (editableText (_fsTitle <$> stateDyn))
 
   columnEvents <- fmap ColEvent
-              <$> Columns.columnsWidget (_fsColumns <$> stateDyn)
+              <$> Columns.widget (_fsColumns <$> stateDyn)
 
   actionItemEvents <- fmap ActionItemEvent
-                  <$> ActionItems.actionItemsWidget (_fsActionItems <$> stateDyn)
+                  <$> ActionItems.widget (_fsActionItems <$> stateDyn)
 
   markdownToClipboardWidget stateDyn
 
@@ -101,7 +101,7 @@ frontendWidget stateDyn = do
                   ]
 
 markdownToClipboardWidget :: (DomBuilder t m, PerformEvent t m, JS.MonadJSM (Performable m))
-                          => Dynamic t FrontendState -> m ()
+                          => Dynamic t Model -> m ()
 markdownToClipboardWidget stateDyn = do
   clipboardClickEv <- simpleButton "Copy Markdown to Clipboard"
 

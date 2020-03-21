@@ -30,11 +30,11 @@ frontend = Frontend
 
         wsEvents <- connectWebSocket mbBaseURI mainEvents
 
-        stateDyn <- foldDyn Main.applyFrontendEvents
-                            Main.initFrontendState
+        stateDyn <- foldDyn Main.applyEvents
+                            Main.initModel
                             frontendEvents
 
-        mainEvents <- Main.frontendWidget stateDyn
+        mainEvents <- Main.widget stateDyn
 
         let frontendEvents = mergeList [mainEvents, wsEvents]
 

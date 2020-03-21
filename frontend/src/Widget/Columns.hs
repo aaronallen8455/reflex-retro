@@ -1,10 +1,10 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Widget.Columns
-  ( ColumnState
-  , ColumnEvent
-  , columnsWidget
-  , applyColumnEvent
+  ( Model
+  , Ev
+  , widget
+  , applyEvent
   , initColumns
   , isKeyEvent
   ) where
@@ -23,52 +23,52 @@ import qualified Widget.Cards as Cards
 import           Widget.EditableText (editableText)
 import           Widget.SimpleButton (buttonClass, simpleButton)
 
-data ColumnState =
-  ColumnState
+data Model =
+  Model
     { _colTitle :: T.Text
-    , _colCards :: M.Map Int Cards.CardState
+    , _colCards :: M.Map Int Cards.Model
     }
 
-makeLenses ''ColumnState
-Aeson.deriveJSON Aeson.defaultOptions ''ColumnState
+makeLenses ''Model
+Aeson.deriveJSON Aeson.defaultOptions ''Model
 
-instance ToMarkdown ColumnState where
+instance ToMarkdown Model where
   toMarkdown cs =
     T.unlines
       $ "### " <> _colTitle cs
       : map (\(i, c) -> T.pack (show i) <> ". " <> toMarkdown c)
             ([1 :: Int ..] `zip` M.elems (_colCards cs))
 
-data ColumnEvent
+data Ev
   = DeleteColumn Int
   | AddColumn T.Text
-  | ColCardEvent Int Cards.CardEvent
+  | ColCardEvent Int Cards.Ev
   | ChangeTitle Int T.Text
 
-Aeson.deriveJSON Aeson.defaultOptions ''ColumnEvent
+Aeson.deriveJSON Aeson.defaultOptions ''Ev
 
-applyColumnEvent :: ColumnEvent -> M.Map Int ColumnState -> M.Map Int ColumnState
-applyColumnEvent (AddColumn colName) colMap
+applyEvent :: Ev -> M.Map Int Model -> M.Map Int Model
+applyEvent (AddColumn colName) colMap
   | T.null colName = colMap
   | otherwise =
     let nxtId = maybe 0 (succ . fst) $ M.lookupMax colMap
-     in M.insert nxtId (ColumnState colName M.empty) colMap
-applyColumnEvent (DeleteColumn colId) colMap
+     in M.insert nxtId (Model colName M.empty) colMap
+applyEvent (DeleteColumn colId) colMap
   = M.delete colId colMap
-applyColumnEvent (ColCardEvent colId cardEvent) colMap
-  = M.adjust (colCards %~ Cards.applyCardEvent cardEvent) colId colMap
-applyColumnEvent (ChangeTitle colId newTitle) colMap
+applyEvent (ColCardEvent colId cardEvent) colMap
+  = M.adjust (colCards %~ Cards.applyEvent cardEvent) colId colMap
+applyEvent (ChangeTitle colId newTitle) colMap
   | T.null newTitle = colMap
   | otherwise = M.adjust (colTitle .~ newTitle) colId colMap
 
-isKeyEvent :: ColumnEvent -> Bool
+isKeyEvent :: Ev -> Bool
 isKeyEvent (AddColumn _) = True
 isKeyEvent (ColCardEvent _ ev) = Cards.isKeyEvent ev
 isKeyEvent _ = False
 
-columnsWidget :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m)
-              => Dynamic t (M.Map Int ColumnState) -> m (Event t ColumnEvent)
-columnsWidget colMapDyn = do
+widget :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m)
+       => Dynamic t (M.Map Int Model) -> m (Event t Ev)
+widget colMapDyn = do
   addColumnNameDyn <- _inputElement_value <$> inputElement def
   addColumnClickEv <- simpleButton "Add Column"
   let addColumnEv = AddColumn <$> current addColumnNameDyn
@@ -82,7 +82,7 @@ columnsWidget colMapDyn = do
   pure $ leftmost [addColumnEv, columnWidgetEvents]
 
 columnWidget :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m)
-             => Int -> Dynamic t ColumnState -> m (Event t ColumnEvent)
+             => Int -> Dynamic t Model -> m (Event t Ev)
 columnWidget colId colStateDyn = elClass "div" "column" $ do
   changeTitleEv
     <- (fmap . fmap) (ChangeTitle colId)
@@ -90,7 +90,7 @@ columnWidget colId colStateDyn = elClass "div" "column" $ do
 
   deleteColumnEv <- (DeleteColumn colId <$) <$> buttonClass "delete-button" "X"
 
-  cardWidgetEvents <- Cards.cardsWidget $ _colCards <$> colStateDyn
+  cardWidgetEvents <- Cards.widget $ _colCards <$> colStateDyn
 
   let cardEvents = ColCardEvent colId <$> cardWidgetEvents
 
@@ -99,9 +99,9 @@ columnWidget colId colStateDyn = elClass "div" "column" $ do
                   , changeTitleEv
                   ]
 
-initColumns :: M.Map Int ColumnState
+initColumns :: M.Map Int Model
 initColumns = M.fromList
-  [ (0, ColumnState "What went well?" M.empty)
-  , (1, ColumnState "What can we do better?" M.empty)
-  , (2, ColumnState "Questions and comments" M.empty)
+  [ (0, Model "What went well?" M.empty)
+  , (1, Model "What can we do better?" M.empty)
+  , (2, Model "Questions and comments" M.empty)
   ]
