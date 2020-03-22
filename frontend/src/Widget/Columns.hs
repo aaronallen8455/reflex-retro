@@ -88,14 +88,14 @@ widget colMapDyn = mdo
 
 columnWidget :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m)
              => Int -> Dynamic t Model -> m (Event t Ev)
-columnWidget colId colStateDyn = elClass "div" "column" $ do
+columnWidget colId modelDyn = elClass "div" "column" $ do
   changeTitleEv
     <- (fmap . fmap) (ChangeTitle colId)
-     . el "h3" $ editableText (_colTitle <$> colStateDyn)
+     . el "h3" $ editableText (_colTitle <$> modelDyn)
 
   deleteColumnEv <- (DeleteColumn colId <$) <$> buttonClass "delete-button" "X"
 
-  cardWidgetEvents <- Cards.widget $ _colCards <$> colStateDyn
+  cardWidgetEvents <- Cards.widget $ _colCards <$> modelDyn
 
   let cardEvents = ColCardEvent colId <$> cardWidgetEvents
 

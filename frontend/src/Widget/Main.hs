@@ -82,18 +82,18 @@ applyEvent (ChangeTitle txt) fs
 
 widget :: ( DomBuilder t m, PostBuild t m, PerformEvent t m, JS.MonadJSM (Performable m), MonadHold t m, MonadFix m)
        => Dynamic t Model -> m (Event t Ev)
-widget stateDyn = do
+widget modelDyn = do
   editTitleEv
     <- fmap ChangeTitle
-   <$> elClass "h2" "title" (editableText (_fsTitle <$> stateDyn))
+   <$> elClass "h2" "title" (editableText (_fsTitle <$> modelDyn))
 
   columnEvents <- fmap ColEvent
-              <$> Columns.widget (_fsColumns <$> stateDyn)
+              <$> Columns.widget (_fsColumns <$> modelDyn)
 
   actionItemEvents <- fmap ActionItemEvent
-                  <$> ActionItems.widget (_fsActionItems <$> stateDyn)
+                  <$> ActionItems.widget (_fsActionItems <$> modelDyn)
 
-  markdownToClipboardWidget stateDyn
+  markdownToClipboardWidget modelDyn
 
   pure $ leftmost [ editTitleEv
                   , columnEvents
@@ -102,11 +102,11 @@ widget stateDyn = do
 
 markdownToClipboardWidget :: (DomBuilder t m, PerformEvent t m, JS.MonadJSM (Performable m))
                           => Dynamic t Model -> m ()
-markdownToClipboardWidget stateDyn = do
+markdownToClipboardWidget modelDyn = do
   clipboardClickEv <- simpleButton "Output Markdown"
 
   let markdownEv = toMarkdown
-               <$> current stateDyn
+               <$> current modelDyn
                <@  clipboardClickEv
 
   void . divClass "markdown-output" $ textAreaElement

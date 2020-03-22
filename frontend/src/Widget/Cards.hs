@@ -99,19 +99,19 @@ widget cardMapDyn = mdo
 
 cardWidget :: (PostBuild t m, DomBuilder t m, MonadHold t m, MonadFix m)
            => Int -> Dynamic t Model -> m (Event t Ev)
-cardWidget cardId cardStateDyn = elClass "div" "card" $ do
+cardWidget cardId modelDyn = elClass "div" "card" $ do
   contentChangeEv
     <- (fmap . fmap) (ContentChange cardId)
-     . elClass "div" "card-content" . editableText $ _cardText <$> cardStateDyn
+     . elClass "div" "card-content" . editableText $ _cardText <$> modelDyn
   elClass "span" "up-votes" . dynText
-    $ T.pack . show . _cardLikes <$> cardStateDyn
+    $ T.pack . show . _cardLikes <$> modelDyn
 
   deleteCardEv <- (DeleteCard cardId <$) <$> buttonClass "delete-button" "X"
   upVoteCardEv <- (UpVote cardId <$) <$> simpleButton "+1"
   downVoteCardEv <- (DownVote cardId <$) <$> simpleButton "-1"
 
   commentEvents <- fmap (CardCommentEvent cardId)
-               <$> Comments.widget (_cardComments <$> cardStateDyn)
+               <$> Comments.widget (_cardComments <$> modelDyn)
 
   pure $ leftmost [ contentChangeEv
                   , deleteCardEv

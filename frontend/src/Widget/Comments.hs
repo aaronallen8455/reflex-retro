@@ -77,10 +77,10 @@ widget comMapDyn = divClass "comments" $ mdo
 
 commentWidget :: (MonadFix m, DomBuilder t m, MonadHold t m, PostBuild t m)
               => Int -> Dynamic t Model -> m (Event t Ev)
-commentWidget comId comStateDyn = divClass "comment" $ do
+commentWidget comId modelDyn = divClass "comment" $ do
   editComEv <- elClass "div" "comment-content"
              . (fmap . fmap) (EditComment comId)
-             $ editableText (_csContent <$> comStateDyn)
+             $ editableText (_csContent <$> modelDyn)
 
   deleteComEv <- (DeleteComment comId <$) <$> buttonClass "delete-button" "X"
 

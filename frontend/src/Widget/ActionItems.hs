@@ -83,7 +83,7 @@ isKeyEvent _ = False
 
 widget :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m)
        => Dynamic t Model -> m (Event t Ev)
-widget aiStatesDyn = divClass "action-items" $ mdo
+widget modelDyn = divClass "action-items" $ mdo
   el "h3" $ text "Action Items"
 
   addActionItemDyn <- _inputElement_value
@@ -98,7 +98,7 @@ widget aiStatesDyn = divClass "action-items" $ mdo
 
   actionItemsEv
     <- fmapMaybe (headMay . M.elems)
-   <$> listViewWithKey (getActionItems <$> aiStatesDyn) actionItemWidget
+   <$> listViewWithKey (getActionItems <$> modelDyn) actionItemWidget
 
   pure $ leftmost [addActionItemEv, actionItemsEv]
 
