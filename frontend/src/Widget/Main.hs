@@ -21,7 +21,7 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as M
 import qualified Data.Text as T
 
-import qualified Language.Javascript.JSaddle.Evaluate as JS
+-- import qualified Language.Javascript.JSaddle.Evaluate as JS
 import qualified Language.Javascript.JSaddle.Types as JS
 import           Reflex.Dom.Core
 
@@ -103,13 +103,16 @@ widget stateDyn = do
 markdownToClipboardWidget :: (DomBuilder t m, PerformEvent t m, JS.MonadJSM (Performable m))
                           => Dynamic t Model -> m ()
 markdownToClipboardWidget stateDyn = do
-  clipboardClickEv <- simpleButton "Copy Markdown to Clipboard"
+  clipboardClickEv <- simpleButton "Output Markdown"
 
   let markdownEv = toMarkdown
                <$> current stateDyn
                <@  clipboardClickEv
 
-  performEvent_ . ffor markdownEv $ \md ->
-    void . JS.liftJSM . JS.eval
-      $ "navigator.clipboard.writeText(`" <> md <> "`)"
+  void . divClass "markdown-output" $ textAreaElement
+    def { _textAreaElementConfig_setValue = Just markdownEv }
+
+  --performEvent_ . ffor markdownEv $ \md ->
+  --  void . JS.liftJSM . JS.eval
+  --    $ "navigator.clipboard.writeText(`" <> md <> "`)"
 

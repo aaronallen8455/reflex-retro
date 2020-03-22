@@ -4,33 +4,42 @@ div.columns {
   align-items: flex-start;
   background-color: #ececec;
   padding: 5px 0 5px 10px;
+  margin-top: 10px;
 }
 
 div.column {
-  background: rgb(153, 234, 216);
+  background: #99eaa4;
   margin: 5px 10px 5px 0;
   padding: 0 5px 5px 5px;
   width: 350px;
   position: relative;
 }
 
+div.column:nth-child(3n+2) {
+  background: #fba2a2;
+}
+
+div.column:nth-child(3n+3) {
+  background: rgb(153, 234, 216);
+}
+
 div.card {
-  background: rgb(179, 243, 202);
+  background-color: rgb(249, 245, 228);
   margin: 5px 0 0 0;
   padding: 5px;
   position: relative;
 }
 
 div.card-content {
-  margin: 8px 0 8px 0
+  margin: 8px 0 8px 0;
 }
 
 div.comments {
 }
 
 div.comment {
-  background-color: #eeda90;
-  border-top: solid 1px #e0a733;
+  background-color: #f7e9b7;
+  border-top: solid 1px #ead3a3;
   padding: 5px;
   position: relative;
 }
@@ -41,7 +50,7 @@ span.up-votes {
 }
 
 div.action-items {
-  margin-top: 10px;
+  margin: 10px 0 10px 0;
   padding: 10px;
   background-color: #c0c8d0;
 }
@@ -67,3 +76,6 @@ button.delete-button {
   right: 3px;
 }
 
+div.markdown-output {
+  margin-top: 10px;
+}
