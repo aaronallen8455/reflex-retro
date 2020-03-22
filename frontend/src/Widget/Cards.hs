@@ -36,10 +36,9 @@ Aeson.deriveJSON Aeson.defaultOptions ''Model
 
 instance ToMarkdown Model where
   toMarkdown cs =
-    T.unlines
-      $ _cardText cs <> " " <> likes
-      : map (("  - " <>) . toMarkdown)
-            (M.elems $ _cardComments cs)
+    _cardText cs <> " " <> likes
+    <> foldMap (("\n  - " <>) . toMarkdown)
+               (M.elems $ _cardComments cs)
     where
       likes | _cardLikes cs == 0 = ""
             | _cardLikes cs > 0 = "(+" <> likeTxt <> ")"

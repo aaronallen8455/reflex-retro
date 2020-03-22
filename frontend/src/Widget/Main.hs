@@ -45,8 +45,8 @@ instance ToMarkdown Model where
   toMarkdown fs =
     T.unlines
       $ "# " <> _fsTitle fs
-      : toMarkdown (_fsActionItems fs)
       : map toMarkdown (M.elems $ _fsColumns fs)
+     <> [toMarkdown (_fsActionItems fs)]
 
 initModel :: Model
 initModel = Model Columns.initColumns mempty "Retro"

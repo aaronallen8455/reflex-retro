@@ -36,7 +36,7 @@ instance ToMarkdown ActionItemState where
   toMarkdown ai = completed <> _aiContent ai
     where
       completed = if _aiCompleted ai
-                     then "**(Completed)** "
+                     then "**(Done)** "
                      else ""
 
 data Ev
@@ -55,10 +55,9 @@ newtype Model =
 instance ToMarkdown Model where
   toMarkdown (Model actionItemMap) =
     T.unlines $
-      [ "### Action Items"
-      , ""
-      ] <> map (\(n, i) -> T.pack (show n) <> ". " <> toMarkdown i)
-               ([1 :: Int ..] `zip` M.elems actionItemMap)
+      "### Action Items"
+      : map (\(n, i) -> T.pack (show n) <> ". " <> toMarkdown i)
+            ([1 :: Int ..] `zip` M.elems actionItemMap)
 
 applyEvent :: Ev
            -> Model
