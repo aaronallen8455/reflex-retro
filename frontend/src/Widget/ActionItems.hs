@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RecursiveDo #-}
 module Widget.ActionItems
   ( Ev
   , Model
@@ -82,15 +83,18 @@ isKeyEvent _ = False
 
 widget :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m)
        => Dynamic t Model -> m (Event t Ev)
-widget aiStatesDyn = divClass "action-items" $ do
+widget aiStatesDyn = divClass "action-items" $ mdo
   el "h3" $ text "Action Items"
 
-  addActionItemDyn <- _inputElement_value <$> inputElement def
+  addActionItemDyn <- _inputElement_value
+                  <$> inputElement def
+                        { _inputElementConfig_setValue = Just clearInpEv }
 
   addActionItemClickEv <- simpleButton "Add Action Item"
 
   let addActionItemEv = NewActionItem <$> current addActionItemDyn
                                       <@  addActionItemClickEv
+      clearInpEv = "" <$ addActionItemClickEv
 
   actionItemsEv
     <- fmapMaybe (headMay . M.elems)

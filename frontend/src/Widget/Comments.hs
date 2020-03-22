@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecursiveDo #-}
 module Widget.Comments
   ( Model
   , Ev
@@ -57,18 +58,22 @@ isKeyEvent _ = False
 
 widget :: (DomBuilder t m, PostBuild t m, MonadHold t m, MonadFix m)
        => Dynamic t (M.Map Int Model) -> m (Event t Ev)
-widget comMapDyn = divClass "comments" $ do
-  addCommentInputDyn <- _inputElement_value <$> inputElement def
+widget comMapDyn = divClass "comments" $ mdo
+  addCommentInputDyn <- _inputElement_value
+                    <$> inputElement def
+                          { _inputElementConfig_setValue = Just clearInpEv }
   addCommentClickEv  <- simpleButton "Add Comment"
 
-  let addCardEv = AddComment <$> current addCommentInputDyn
-                             <@  addCommentClickEv
+  let addCommentEv =
+        AddComment <$> current addCommentInputDyn
+                   <@  addCommentClickEv
+      clearInpEv = "" <$ addCommentClickEv
 
   commentWidgetEvents
     <- fmapMaybe (headMay . M.elems)
    <$> listViewWithKey comMapDyn commentWidget
 
-  pure $ leftmost [addCardEv, commentWidgetEvents]
+  pure $ leftmost [addCommentEv, commentWidgetEvents]
 
 commentWidget :: (MonadFix m, DomBuilder t m, MonadHold t m, PostBuild t m)
               => Int -> Dynamic t Model -> m (Event t Ev)

@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecursiveDo #-}
 module Widget.Columns
   ( Model
   , Ev
@@ -68,11 +69,15 @@ isKeyEvent _ = False
 
 widget :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m)
        => Dynamic t (M.Map Int Model) -> m (Event t Ev)
-widget colMapDyn = do
-  addColumnNameDyn <- _inputElement_value <$> inputElement def
+widget colMapDyn = mdo
+  addColumnNameDyn <- _inputElement_value
+                  <$> inputElement def
+                        { _inputElementConfig_setValue = Just clearInpEv }
   addColumnClickEv <- simpleButton "Add Column"
+
   let addColumnEv = AddColumn <$> current addColumnNameDyn
                               <@  addColumnClickEv
+      clearInpEv = "" <$ addColumnClickEv
 
   columnWidgetEvents
     <- elClass "div" "columns"
