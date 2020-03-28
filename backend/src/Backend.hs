@@ -124,6 +124,7 @@ broadcast serverState senderId msg =
   let clients = M.delete senderId $ _ssClients serverState
    in traverse_ (flip WS.sendTextData msg) clients
 
+-- Use filesystem persistence to save the state of the frontend.
 saveFrontend :: ServerState -> IO ServerState
 saveFrontend serverState = do
   if _ssPendingSave serverState
@@ -132,6 +133,7 @@ saveFrontend serverState = do
        pure serverState { _ssPendingSave = False }
      else pure serverState
 
+-- Load a saved frontend. Emits nothing if there is no file or decoding fails.
 loadSavedFrontend :: IO (Maybe Frontend.Model)
 loadSavedFrontend = do
   join . either (const Nothing) Just
