@@ -20,7 +20,7 @@ import           Reflex.Dom.Core
 
 import           Common.Markdown (ToMarkdown(..))
 import           Widget.EditableText (editableText)
-import           Widget.SimpleButton (buttonClass, simpleButton)
+import           Widget.SimpleButton (buttonClass)
 
 data Model =
   Model
@@ -62,7 +62,7 @@ widget comMapDyn = divClass "comments" $ mdo
   addCommentInputDyn <- _inputElement_value
                     <$> inputElement def
                           { _inputElementConfig_setValue = Just clearInpEv }
-  addCommentClickEv  <- simpleButton "Add Comment"
+  addCommentClickEv  <- buttonClass "add-button" "Add Comment"
 
   let addCommentEv =
         AddComment <$> current addCommentInputDyn

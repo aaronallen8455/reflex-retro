@@ -22,7 +22,7 @@ import           Reflex.Dom.Core
 
 import           Common.Markdown (ToMarkdown(..))
 import           Widget.EditableText (editableTextDynClass)
-import           Widget.SimpleButton (buttonClass, simpleButton)
+import           Widget.SimpleButton (buttonClass)
 
 data ActionItemState =
   ActionItemState
@@ -90,7 +90,7 @@ widget modelDyn = divClass "action-items" $ mdo
                   <$> inputElement def
                         { _inputElementConfig_setValue = Just clearInpEv }
 
-  addActionItemClickEv <- simpleButton "Add Action Item"
+  addActionItemClickEv <- buttonClass "add-button" "Add Action Item"
 
   let addActionItemEv = NewActionItem <$> current addActionItemDyn
                                       <@  addActionItemClickEv
@@ -125,4 +125,5 @@ actionItemWidget aiId aiStateDyn = divClass "action-item" $ do
   deletedEv <- (DeleteActionItem aiId <$) <$> buttonClass "delete-button" "X"
 
   pure $ leftmost [contentChangedEv, completedEv, deletedEv]
+
 

@@ -85,7 +85,7 @@ widget cardMapDyn = mdo
   addCardInputDyn <- _inputElement_value
                  <$> inputElement def
                        { _inputElementConfig_setValue = Just clearInpEv }
-  addCardClickEv  <- simpleButton "Add Card"
+  addCardClickEv  <- buttonClass "add-button" "Add Card"
 
   let addCardEv = AddCard <$> current addCardInputDyn
                           <@  addCardClickEv
