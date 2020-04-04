@@ -21,6 +21,7 @@ import           Reflex.Dom.Core
 import           Common.Markdown (ToMarkdown(..))
 import           Widget.EditableText (editableText)
 import           Widget.SimpleButton (buttonClass)
+import           Widget.TextEntry (textEntry)
 
 data Model =
   Model
@@ -59,15 +60,8 @@ isKeyEvent _ = False
 widget :: (DomBuilder t m, PostBuild t m, MonadHold t m, MonadFix m)
        => Dynamic t (M.Map Int Model) -> m (Event t Ev)
 widget comMapDyn = divClass "comments" $ mdo
-  addCommentInputDyn <- _inputElement_value
-                    <$> inputElement def
-                          { _inputElementConfig_setValue = Just clearInpEv }
-  addCommentClickEv  <- buttonClass "add-button" "Add Comment"
-
-  let addCommentEv =
-        AddComment <$> current addCommentInputDyn
-                   <@  addCommentClickEv
-      clearInpEv = "" <$ addCommentClickEv
+  addCommentEv <- fmap AddComment
+              <$> textEntry "Add Comment..."
 
   commentWidgetEvents
     <- fmapMaybe (headMay . M.elems)

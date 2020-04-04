@@ -28,6 +28,7 @@ library
                , Widget.EditableText
                , Widget.Main
                , Widget.SimpleButton
+               , Widget.TextEntry
                , WebSocket
   ghc-options: -Wall
 

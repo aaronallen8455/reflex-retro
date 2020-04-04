@@ -23,6 +23,7 @@ import           Common.Markdown (ToMarkdown(..))
 import qualified Widget.Cards as Cards
 import           Widget.EditableText (editableText)
 import           Widget.SimpleButton (buttonClass)
+import           Widget.TextEntry (textEntry)
 
 data Model =
   Model
@@ -70,17 +71,8 @@ isKeyEvent _ = False
 widget :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m)
        => Dynamic t (M.Map Int Model) -> m (Event t Ev)
 widget colMapDyn = do
-  addColumnEv <- divClass "add-column-wrapper" $ mdo
-    addColumnNameDyn <- _inputElement_value
-                    <$> inputElement def
-                          { _inputElementConfig_setValue = Just clearInpEv }
-    addColumnClickEv <- buttonClass "add-button" "Add Column"
-
-    let addColumnEv = AddColumn <$> current addColumnNameDyn
-                                <@  addColumnClickEv
-        clearInpEv = "" <$ addColumnClickEv
-
-    pure addColumnEv
+  addColumnEv <- fmap AddColumn
+             <$> textEntry "Add Column..."
 
   columnWidgetEvents
     <- elClass "div" "columns"

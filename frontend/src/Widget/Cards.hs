@@ -24,6 +24,7 @@ import           Common.Markdown (ToMarkdown(..))
 import qualified Widget.Comments as Comments
 import           Widget.EditableText (editableText)
 import           Widget.SimpleButton (buttonClass, simpleButton)
+import           Widget.TextEntry (textEntry)
 
 data Model =
   Model
@@ -82,14 +83,8 @@ isKeyEvent _ = False
 widget :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m)
        => Dynamic t (M.Map Int Model) -> m (Event t Ev)
 widget cardMapDyn = mdo
-  addCardInputDyn <- _inputElement_value
-                 <$> inputElement def
-                       { _inputElementConfig_setValue = Just clearInpEv }
-  addCardClickEv  <- buttonClass "add-button" "Add Card"
-
-  let addCardEv = AddCard <$> current addCardInputDyn
-                          <@  addCardClickEv
-      clearInpEv = "" <$ addCardClickEv
+  addCardEv <- fmap AddCard
+           <$> textEntry "Add Card..."
 
   cardWidgetEvents
     <- fmapMaybe (headMay . M.elems)

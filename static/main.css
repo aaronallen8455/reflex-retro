@@ -53,6 +53,10 @@ input {
   background: #99ead8;
 }
 
+.column .text-input {
+  width: calc(100% - 5px);
+}
+
 .card {
   background-color: #f9f5e4;
   box-sizing: border-box;
@@ -101,6 +105,10 @@ input {
   padding: 10px;
   margin-top: 5px;
   position: relative;
+}
+
+.action-items .text-input {
+  width: calc(100% - 5px);
 }
 
 .action-items .action-item span {
