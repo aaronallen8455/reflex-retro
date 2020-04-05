@@ -1,144 +1,146 @@
 @import url("https://fonts.googleapis.com/css?family=Montserrat&display=swap");
 
 body {
-  font-family: "Montserrat", sans-serif;
-  font-size: 14px;
-  margin: 20px 10px 10px 10px;
-  padding: 0;
-  border: 0;
+	border: 0;
+	font-family: "Montserrat", sans-serif;
+	font-size: 14px;
+	margin: 20px 10px 10px 10px;
+	padding: 0;
 }
 
 button:hover {
-  cursor: pointer;
+	cursor: pointer;
 }
 
 button:focus {
-  outline: none;
+	outline: none;
 }
 
 input {
-  border-radius: 4px;
-  border: 1px solid #bbb;
-  outline: none;
+	border-radius: 4px;
+	border: 1px solid #bbb;
+	outline: none;
 }
 
 .columns {
-  border-radius: 5px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  background-color: #ececec;
-  padding: 5px 0 5px 10px;
-  margin-top: 10px;
+	align-items: flex-start;
+	background-color: #ececec;
+	border-radius: 5px;
+	display: flex;
+	flex-wrap: nowrap;
+	margin-top: 10px;
+	overflow-x: auto;
+	padding: 5px 0 5px 10px;
 }
 
 .columns .column {
-  background: #99eaa4;
-  border-radius: 5px;
-  margin: 5px 10px 5px 0;
-  padding: 0 5px 5px 5px;
-  display: flex;
-  width: 400px;
-  position: relative;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
+	align-items: center;
+	background: #99eaa4;
+	border-radius: 5px;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	margin: 5px 10px 5px 0;
+	max-width: 400px;
+	min-width: 400px;
+	padding: 0 5px 5px 5px;
+	position: relative;
+	width: 100%;
 }
 
 .columns .column:nth-child(3n + 2) {
-  background: #fba2a2;
+	background: #fba2a2;
 }
 
 .columns .column:nth-child(3n + 3) {
-  background: #99ead8;
+	background: #99ead8;
 }
 
 .column .text-input {
-  width: calc(100% - 5px);
+	width: calc(100% - 5px);
 }
 
 .card {
-  background-color: #f9f5e4;
-  box-sizing: border-box;
-  margin: 5px 0 0 0;
-  padding: 5px;
-  position: relative;
-  width: 100%;
+	background-color: #f9f5e4;
+	box-sizing: border-box;
+	margin: 5px 0 0 0;
+	padding: 5px;
+	position: relative;
+	width: 100%;
 }
 
 .card .card-content {
-  margin: 15px 0 8px 0;
+	margin: 15px 0 8px 0;
 }
 
 .up-votes {
-  color: #ff7e0dde;
-  font-weight: bold;
-  padding-right: 5px;
+	color: #ff7e0dde;
+	font-weight: bold;
+	padding-right: 5px;
 }
 
 .comments {
-  padding-top: 5px;
+	padding-top: 5px;
 }
 
 .comments .comment {
-  background-color: #f7e9b7;
-  border-top: solid 1px #ead3a3;
-  padding: 5px;
-  position: relative;
-  margin-top: 5px;
+	background-color: #f7e9b7;
+	border-top: solid 1px #ead3a3;
+	padding: 5px;
+	position: relative;
+	margin-top: 5px;
 }
 
 .comments .comment .comment-content {
-  padding-top: 5px;
+	padding-top: 5px;
 }
 
 .action-items {
-  border-radius: 5px;
-  margin: 10px 0 10px 0;
-  padding: 10px;
-  background-color: #c0c8d0;
+	background-color: #c0c8d0;
+	border-radius: 5px;
+	margin: 10px 0 10px 0;
+	padding: 10px;
 }
 
 .action-items .action-item {
-  background-color: #eaeaea;
-  border-radius: 5px;
-  padding: 10px;
-  margin-top: 5px;
-  position: relative;
+	background-color: #eaeaea;
+	border-radius: 5px;
+	padding: 10px;
+	margin-top: 5px;
+	position: relative;
 }
 
 .action-items .text-input {
-  width: calc(100% - 5px);
+	width: 100%;
 }
 
 .action-items .action-item span {
-  margin: 0 5px 0 5px;
+	margin: 0 5px 0 5px;
 }
 
 .completed-action-item {
-  text-decoration: line-through;
+	text-decoration: line-through;
 }
 
 .add-button {
-  margin-left: 3px;
+	margin-left: 3px;
 }
 
 .delete-button {
-  border-radius: 5px;
-  position: absolute;
-  top: 3px;
-  right: 3px;
+	border-radius: 5px;
+	position: absolute;
+	right: 3px;
+	top: 3px;
 }
 
 .delete-button:hover {
-  border: 1px solid #fba2a2;
+	border: 1px solid #fba2a2;
 }
 
 .markdown-output {
-  margin-top: 10px;
+	margin-top: 10px;
 }
 
 div.add-column-wrapper {
-  width: 100%;
+	width: 100%;
 }
-
