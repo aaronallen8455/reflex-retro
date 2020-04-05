@@ -85,10 +85,11 @@ input {
 
 .comments .comment {
   background-color: #f7e9b7;
+  border-radius: 5px;
   border-top: solid 1px #ead3a3;
+  margin-top: 5px;
   padding: 5px;
   position: relative;
-  margin-top: 5px;
 }
 
 .comments .comment .comment-content {
