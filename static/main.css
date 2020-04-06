@@ -100,10 +100,15 @@ input[type='checkbox'] {
 
 .comments .comment {
   background-color: #f7e9b7;
-  border-top: solid 1px #ead3a3;
+  border: 1px solid #ead3a3;
+  border-radius: 5px;
   padding: 5px;
-  position: relative;
   margin-top: 5px;
+  position: relative;
+}
+
+.comments .comment:first-child {
+  margin-top: 0;
 }
 
 .comments .comment .comment-content {
@@ -148,7 +153,7 @@ input[type='checkbox'] {
 
 .delete-button:hover {
   border: 1px solid #ff8686;
-  color: #ff8686;
+  color: ff8686;
 }
 
 .markdown-output {
