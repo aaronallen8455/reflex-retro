@@ -65,6 +65,7 @@ input[type='checkbox'] {
 
 .text-input {
   height: 30px;
+  max-width: 428px;
   padding-left: 5px;
   width: 100%;
 }
