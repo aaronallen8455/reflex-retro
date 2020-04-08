@@ -9,8 +9,8 @@ library
                , base
                , common
                , containers
+               , ghcjs-dom
                , jsaddle
-               , jsaddle-dom
                , lens
                , modern-uri
                , obelisk-executable-config-lookup

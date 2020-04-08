@@ -22,7 +22,7 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as M
 import qualified Data.Text as T
 
-import qualified JSDOM.Generated.HTMLTextAreaElement as HTML
+import qualified GHCJS.DOM.HTMLTextAreaElement as DOM
 import qualified Language.Javascript.JSaddle.Evaluate as JS
 import qualified Language.Javascript.JSaddle.Types as JS
 import           Reflex.Dom.Core
@@ -115,7 +115,7 @@ markdownToClipboardWidget modelDyn = do
     def & textAreaElementConfig_setValue .~ markdownEv
 
   let copyToClipBoard = do
-        HTML.select $ _textAreaElement_raw mdTextArea
+        DOM.select $ _textAreaElement_raw mdTextArea
         void . JS.liftJSM . JS.eval
           $ ("document.execCommand('copy')" :: String)
 
