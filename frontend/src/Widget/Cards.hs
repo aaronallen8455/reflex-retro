@@ -101,7 +101,7 @@ cardWidget cardId modelDyn = elClass "div" "card" $ do
   elClass "span" "up-votes" . dynText
     $ T.pack . show . _cardLikes <$> modelDyn
 
-  deleteCardEv <- (DeleteCard cardId <$) <$> buttonClass "delete-button" "X"
+  deleteCardEv <- (DeleteCard cardId <$) <$> buttonClass "delete-button" "×"
   upVoteCardEv <- (UpVote cardId <$) <$> simpleButton "+1"
   downVoteCardEv <- (DownVote cardId <$) <$> simpleButton "-1"
 

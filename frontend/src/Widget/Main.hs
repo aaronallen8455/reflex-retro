@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies #-}
 module Widget.Main
   ( Model
   , Ev
@@ -21,7 +22,8 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as M
 import qualified Data.Text as T
 
--- import qualified Language.Javascript.JSaddle.Evaluate as JS
+import qualified JSDOM.Generated.HTMLTextAreaElement as HTML
+import qualified Language.Javascript.JSaddle.Evaluate as JS
 import qualified Language.Javascript.JSaddle.Types as JS
 import           Reflex.Dom.Core
 
@@ -29,7 +31,7 @@ import           Common.Markdown (ToMarkdown(..))
 import qualified Widget.ActionItems as ActionItems
 import qualified Widget.Columns as Columns
 import           Widget.EditableText (editableText)
-import           Widget.SimpleButton (simpleButton)
+import           Widget.SimpleButton (buttonClass)
 
 data Model =
   Model
@@ -80,12 +82,14 @@ applyEvent (ChangeTitle txt) fs
   | not $ T.null txt = fs & fsTitle .~ txt
   | otherwise = fs
 
-widget :: ( DomBuilder t m, PostBuild t m, PerformEvent t m, JS.MonadJSM (Performable m), MonadHold t m, MonadFix m)
+widget :: (DomBuilderSpace m ~ GhcjsDomSpace, DomBuilder t m, PostBuild t m, PerformEvent t m, JS.MonadJSM (Performable m), MonadHold t m, MonadFix m)
        => Dynamic t Model -> m (Event t Ev)
 widget modelDyn = do
   editTitleEv
     <- fmap ChangeTitle
    <$> elClass "h2" "title" (editableText (_fsTitle <$> modelDyn))
+
+  markdownToClipboardWidget modelDyn
 
   columnEvents <- fmap ColEvent
               <$> Columns.widget (_fsColumns <$> modelDyn)
@@ -93,26 +97,28 @@ widget modelDyn = do
   actionItemEvents <- fmap ActionItemEvent
                   <$> ActionItems.widget (_fsActionItems <$> modelDyn)
 
-  markdownToClipboardWidget modelDyn
-
   pure $ leftmost [ editTitleEv
                   , columnEvents
                   , actionItemEvents
                   ]
 
-markdownToClipboardWidget :: (DomBuilder t m, PerformEvent t m, JS.MonadJSM (Performable m))
+markdownToClipboardWidget :: (DomBuilderSpace m ~ GhcjsDomSpace, DomBuilder t m, PerformEvent t m, JS.MonadJSM (Performable m))
                           => Dynamic t Model -> m ()
 markdownToClipboardWidget modelDyn = do
-  clipboardClickEv <- simpleButton "Output Markdown"
+  clipboardClickEv <- buttonClass "markdown-button" "Copy Markdown to Clipboard"
 
   let markdownEv = toMarkdown
                <$> current modelDyn
                <@  clipboardClickEv
 
-  void . divClass "markdown-output" $ textAreaElement
-    def { _textAreaElementConfig_setValue = Just markdownEv }
+  mdTextArea <- divClass "markdown-output" . textAreaElement $
+    def & textAreaElementConfig_setValue .~ markdownEv
 
-  --performEvent_ . ffor markdownEv $ \md ->
-  --  void . JS.liftJSM . JS.eval
-  --    $ "navigator.clipboard.writeText(`" <> md <> "`)"
+  let copyToClipBoard = do
+        HTML.select $ _textAreaElement_raw mdTextArea
+        void . JS.liftJSM . JS.eval
+          $ ("document.execCommand('copy')" :: String)
+
+  performEvent_
+    $ copyToClipBoard <$ updated (_textAreaElement_value mdTextArea)
 

@@ -116,7 +116,7 @@ actionItemWidget aiId aiStateDyn = divClass "action-item" $ do
    <$> editableTextDynClass (_aiContent <$> aiStateDyn)
                             (completedClass . _aiCompleted <$> aiStateDyn)
 
-  deletedEv <- (DeleteActionItem aiId <$) <$> buttonClass "delete-button" "X"
+  deletedEv <- (DeleteActionItem aiId <$) <$> buttonClass "delete-button" "×"
 
   pure $ leftmost [contentChangedEv, completedEv, deletedEv]
 
