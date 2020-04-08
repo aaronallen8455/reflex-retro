@@ -54,7 +54,7 @@ input {
 }
 
 .column .text-input {
-  width: calc(100% - 5px);
+  width: calc(100% - 3px);
 }
 
 .card {
@@ -80,12 +80,15 @@ input {
   padding-top: 5px;
 }
 
+.comments .text-input {
+  margin-bottom: 5px;
+}
+
 .comments .comment {
   background-color: #f7e9b7;
   border-top: solid 1px #ead3a3;
   padding: 5px;
   position: relative;
-  margin-top: 5px;
 }
 
 .comments .comment .comment-content {
@@ -108,7 +111,7 @@ input {
 }
 
 .action-items .text-input {
-  width: calc(100% - 5px);
+  width: calc(100% - 3px);
 }
 
 .action-items .action-item span {
@@ -124,18 +127,41 @@ input {
 }
 
 .delete-button {
-  border-radius: 5px;
+  background-color: transparent;
+  border-radius: 15px;
+  border: solid 1px #0000001c;
+  color: #0000001c;
   position: absolute;
   top: 3px;
   right: 3px;
+  font-weight: bold;
+  font-size: 1em;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  line-height: 0;
 }
 
 .delete-button:hover {
-  border: 1px solid #fba2a2;
+  border: solid 2px #0000003e;
+  color: #0000003e;
 }
 
 .markdown-output {
-  margin-top: 10px;
+  position: absolute;
+  left: -900px;
+}
+
+.markdown-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: white;
+  color: black;
+  padding: 5px 10px;
+  border-radius: 15px;
+  border: solid 2px black;
+  font-weight: bold;
 }
 
 div.add-column-wrapper {

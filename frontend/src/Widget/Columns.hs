@@ -88,7 +88,7 @@ columnWidget colId modelDyn = elClass "div" "column" $ do
     <- (fmap . fmap) (ChangeTitle colId)
      . el "h3" $ editableText (_colTitle <$> modelDyn)
 
-  deleteColumnEv <- (DeleteColumn colId <$) <$> buttonClass "delete-button" "X"
+  deleteColumnEv <- (DeleteColumn colId <$) <$> buttonClass "delete-button" "×"
 
   cardWidgetEvents <- Cards.widget $ _colCards <$> modelDyn
 

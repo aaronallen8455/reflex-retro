@@ -76,6 +76,6 @@ commentWidget comId modelDyn = divClass "comment" $ do
              . (fmap . fmap) (EditComment comId)
              $ editableText (_csContent <$> modelDyn)
 
-  deleteComEv <- (DeleteComment comId <$) <$> buttonClass "delete-button" "X"
+  deleteComEv <- (DeleteComment comId <$) <$> buttonClass "delete-button" "×"
 
   pure $ leftmost [editComEv, deleteComEv]
