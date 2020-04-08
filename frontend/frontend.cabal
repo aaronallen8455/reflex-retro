@@ -10,6 +10,7 @@ library
                , common
                , containers
                , jsaddle
+               , jsaddle-dom
                , lens
                , modern-uri
                , obelisk-executable-config-lookup
