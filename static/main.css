@@ -33,10 +33,14 @@ input[type="checkbox"] {
   align-items: flex-start;
   background-color: #ececec;
   border-radius: 5px;
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
   display: flex;
+  box-sizing: border-box;
   flex-wrap: nowrap;
   overflow-x: auto;
   margin-top: 15px;
+  padding: 10px;
 }
 
 .columns .column {
@@ -49,7 +53,7 @@ input[type="checkbox"] {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  margin: 10px 10px 10px 0;
+  margin-right: 10px;
   max-width: 400px;
   min-width: 400px;
   padding: 0 5px 5px 5px;
@@ -57,8 +61,8 @@ input[type="checkbox"] {
   width: 100%;
 }
 
-.columns .column:first-of-type {
-  margin-left: 10px;
+.columns .column:last-of-type {
+  margin-right: 0;
 }
 
 .columns .column:nth-child(3n + 2) {
