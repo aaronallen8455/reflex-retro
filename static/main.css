@@ -169,14 +169,15 @@ input[type="checkbox"] {
   border-radius: 15px;
   border: solid 1px #0000001c;
   color: #0000001c;
-  position: absolute;
-  right: 3px;
   font-weight: bold;
   font-size: 1em;
-  width: 20px;
   height: 20px;
-  padding: 0;
   line-height: 0;
+  padding: 0;
+  position: absolute;
+  right: 3px;
+  top: 5px;
+  width: 20px;
 }
 
 .delete-button:hover {
