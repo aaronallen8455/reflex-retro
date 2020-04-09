@@ -1,11 +1,11 @@
 @import url("https://fonts.googleapis.com/css?family=Montserrat&display=swap");
 
 body {
+  border: 0;
   font-family: "Montserrat", sans-serif;
   font-size: 14px;
   margin: 20px 10px 10px 10px;
   padding: 0;
-  border: 0;
 }
 
 button:hover {
@@ -22,27 +22,47 @@ input {
   outline: none;
 }
 
+input[type="checkbox"] {
+  cursor: pointer;
+  margin-left: 10px;
+  margin-right: 10px;
+  transform: scale(1.3);
+}
+
 .columns {
-  border-radius: 5px;
-  display: flex;
-  flex-wrap: wrap;
   align-items: flex-start;
   background-color: #ececec;
-  padding: 5px 0 5px 10px;
-  margin-top: 10px;
+  border-radius: 5px;
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  display: flex;
+  box-sizing: border-box;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  margin-top: 15px;
+  padding: 10px;
 }
 
 .columns .column {
-  background: #99eaa4;
-  border-radius: 5px;
-  margin: 5px 10px 5px 0;
-  padding: 0 5px 5px 5px;
-  display: flex;
-  width: 400px;
-  position: relative;
-  justify-content: center;
   align-items: center;
+  background: #99eaa4;
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  border-radius: 5px;
+  display: flex;
   flex-direction: column;
+  justify-content: center;
+  margin-right: 10px;
+  max-width: 400px;
+  min-width: 400px;
+  padding: 0 5px 5px 5px;
+  position: relative;
+  width: 100%;
+}
+
+.columns .column:last-of-type {
+  margin-right: 0;
 }
 
 .columns .column:nth-child(3n + 2) {
@@ -53,13 +73,27 @@ input {
   background: #99ead8;
 }
 
-.column .text-input {
+.text-input {
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  height: 30px;
+  max-width: 428px;
+  padding-left: 5px;
   width: calc(100% - 3px);
+}
+
+.text-input:focus {
+  box-shadow: 0 0 5px rgba(81, 203, 238, 1);
+  border: 1px solid rgba(81, 203, 238, 1);
 }
 
 .card {
   background-color: #f9f5e4;
+  border-radius: 5px;
   box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
   margin: 5px 0 0 0;
   padding: 5px;
   position: relative;
@@ -86,9 +120,15 @@ input {
 
 .comments .comment {
   background-color: #f7e9b7;
-  border-top: solid 1px #ead3a3;
+  border: 1px solid #ead3a3;
+  border-radius: 5px;
   padding: 5px;
+  margin-top: 5px;
   position: relative;
+}
+
+.comments .comment:first-child {
+  margin-top: 0;
 }
 
 .comments .comment .comment-content {
@@ -96,16 +136,18 @@ input {
 }
 
 .action-items {
+  background-color: #c0c8d0;
   border-radius: 5px;
   margin: 10px 0 10px 0;
   padding: 10px;
-  background-color: #c0c8d0;
 }
 
 .action-items .action-item {
+  align-items: center;
   background-color: #eaeaea;
   border-radius: 5px;
-  padding: 10px;
+  display: flex;
+  height: 38px;
   margin-top: 5px;
   position: relative;
 }
@@ -115,7 +157,7 @@ input {
 }
 
 .action-items .action-item span {
-  margin: 0 5px 0 5px;
+  word-break: normal;
 }
 
 .completed-action-item {
@@ -131,15 +173,15 @@ input {
   border-radius: 15px;
   border: solid 1px #0000001c;
   color: #0000001c;
-  position: absolute;
-  top: 3px;
-  right: 3px;
   font-weight: bold;
   font-size: 1em;
-  width: 20px;
   height: 20px;
-  padding: 0;
   line-height: 0;
+  padding: 0;
+  position: absolute;
+  right: 3px;
+  top: 5px;
+  width: 20px;
 }
 
 .delete-button:hover {
@@ -167,4 +209,3 @@ input {
 div.add-column-wrapper {
   width: 100%;
 }
-
