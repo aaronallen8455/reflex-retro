@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE PackageImports #-}
 module Widget.Main
   ( Model
   , Ev
@@ -14,16 +15,17 @@ module Widget.Main
   ) where
 
 import           Control.Lens
-import           Control.Monad (void)
 import           Control.Monad.Fix (MonadFix)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.TH as Aeson
+import           Data.Foldable (for_)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as M
 import qualified Data.Text as T
 
 import qualified GHCJS.DOM.HTMLTextAreaElement as DOM
-import qualified Language.Javascript.JSaddle.Evaluate as JS
+import qualified "ghcjs-dom" GHCJS.DOM.Document as DOM
+import qualified GHCJS.DOM as DOM
 import qualified Language.Javascript.JSaddle.Types as JS
 import           Reflex.Dom.Core
 
@@ -116,8 +118,9 @@ markdownToClipboardWidget modelDyn = do
 
   let copyToClipBoard = do
         DOM.select $ _textAreaElement_raw mdTextArea
-        void . JS.liftJSM . JS.eval
-          $ ("document.execCommand('copy')" :: String)
+        mbDoc <- DOM.currentDocument
+        for_ mbDoc $ \doc ->
+          DOM.execCommand_ doc ("copy" :: String) False (Nothing :: Maybe String)
 
   performEvent_
     $ copyToClipBoard <$ updated (_textAreaElement_value mdTextArea)
