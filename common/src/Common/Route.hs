@@ -4,17 +4,14 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE MultiParamTypeClasses #-} {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 module Common.Route where
 
-{- -- You will probably want these imports for composing Encoders.
 import Prelude hiding (id, (.))
 import Control.Category
--}
 
 import Data.Text (Text)
 import Data.Functor.Identity
@@ -22,15 +19,17 @@ import Data.Functor.Identity
 import Obelisk.Route
 import Obelisk.Route.TH
 
+import           Debug.Trace
+
 data BackendRoute :: * -> * where
   -- | Used to handle unparseable routes.
   BackendRoute_Missing :: BackendRoute ()
-  BackendRoute_WebSocket :: BackendRoute ()
+  BackendRoute_WebSocket :: BackendRoute (Text, ())
   -- You can define any routes that will be handled specially by the backend here.
   -- i.e. These do not serve the frontend, but do something different, such as serving static files.
 
 data FrontendRoute :: * -> * where
-  FrontendRoute_Main :: FrontendRoute ()
+  FrontendRoute_Main :: FrontendRoute (Text, ())
   -- This type is used to define frontend routes, i.e. ones for which the backend will serve the frontend.
 
 fullRouteEncoder
@@ -39,10 +38,14 @@ fullRouteEncoder = mkFullRouteEncoder
   (FullRoute_Backend BackendRoute_Missing :/ ())
   (\case
       BackendRoute_Missing -> PathSegment "missing" $ unitEncoder mempty
-      BackendRoute_WebSocket -> PathSegment "websocket" $ unitEncoder mempty
+      BackendRoute_WebSocket -> PathSegment "websocket"
+                              . pathParamEncoder id
+                              $ unitEncoder mempty
   )
   (\case
-      FrontendRoute_Main -> PathEnd $ unitEncoder mempty
+      FrontendRoute_Main -> PathSegment "retro"
+                          . pathParamEncoder id
+                          $ unitEncoder mempty
   )
 
 concat <$> mapM deriveRouteComponent

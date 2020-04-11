@@ -2,6 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE LambdaCase #-}
 module Backend
   ( backend
   ) where
@@ -12,21 +13,25 @@ import           Control.Concurrent.MVar (MVar, modifyMVar, modifyMVar_, newMVar
 import           Control.Lens
 import           Control.Monad (forever, join)
 import           Control.Monad.Catch (finally, try)
+import           Control.Monad.IO.Class (liftIO)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
-import           Data.Dependent.Sum
 import           Data.Foldable (traverse_)
 import qualified Data.Map as M
 import           Data.Maybe (fromMaybe)
+import qualified Data.Text as T
 import qualified Network.WebSockets as WS
 import           Network.WebSockets.Snap (runWebSocketsSnap)
 import           Obelisk.Backend
+import           Obelisk.Route
 
 import qualified Frontend as Frontend
 
 newtype ClientId =
   ClientId Int
   deriving (Show, Eq, Enum, Ord)
+
+type BoardName = T.Text
 
 data ServerState =
   ServerState
@@ -41,26 +46,37 @@ makeLenses ''ServerState
 backend :: Backend BackendRoute FrontendRoute
 backend = Backend
   { _backend_run = \serve -> do
-      mbLoaded <- loadSavedFrontend
 
-      stateMVar
-        <- newMVar ServerState
-             { _ssClients       = M.empty
-             , _ssClientIdSeq   = ClientId 0
-             , _ssFrontendState = fromMaybe Frontend.initModel mbLoaded
-             , _ssPendingSave   = False
-             }
+      -- an MVar containing a map of state MVars for each board instance
+      boardsMVar <- newMVar M.empty :: IO (MVar (M.Map T.Text (MVar ServerState)))
 
       -- Save the frontend to disk every 60 secs
       _ <- forkIO . forever $ do
         threadDelay 60000000
-        modifyMVar_ stateMVar saveFrontend
+        modifyMVar_ boardsMVar saveFrontend
 
-      serve $ \r ->
-        case r of
-          BackendRoute_Missing :=> _   -> pure ()
-          BackendRoute_WebSocket :=> _ -> do
-            runWebSocketsSnap $ websocketsServer stateMVar
+      serve $ \case
+        BackendRoute_Missing :/ _ -> pure ()
+        BackendRoute_WebSocket :/ (boardName, _) -> do
+          stateMVar <- liftIO . modifyMVar boardsMVar $ \boardMap ->
+            case M.lookup boardName boardMap of
+              Nothing -> do
+                -- if the board doesn't exist, initialize a new state for it
+                mbLoaded <- loadSavedFrontend boardName
+                s <- newMVar ServerState
+                       { _ssClients       = M.empty
+                       , _ssClientIdSeq   = ClientId 0
+                       , _ssFrontendState = fromMaybe Frontend.initModel mbLoaded
+                       , _ssPendingSave   = False
+                       }
+
+                pure (M.insert boardName s boardMap, s)
+
+              Just s -> pure (boardMap, s)
+
+          runWebSocketsSnap $ websocketsServer stateMVar
+
+        _ -> pure ()
   , _backend_routeEncoder = fullRouteEncoder
   }
 
@@ -125,17 +141,24 @@ broadcast serverState senderId msg =
    in traverse_ (flip WS.sendTextData msg) clients
 
 -- Use filesystem persistence to save the state of the frontend.
-saveFrontend :: ServerState -> IO ServerState
-saveFrontend serverState = do
-  if _ssPendingSave serverState
-     then do
-       Aeson.encodeFile "saved-state.json" $ _ssFrontendState serverState
-       pure serverState { _ssPendingSave = False }
-     else pure serverState
+saveFrontend :: M.Map BoardName (MVar ServerState) -> IO (M.Map BoardName (MVar ServerState))
+saveFrontend boardMap = do
+  ifor boardMap $ \boardName stateMVar -> modifyMVar stateMVar $ \serverState ->
+    if _ssPendingSave serverState
+       then do
+         Aeson.encodeFile (savedBoardFileName boardName)
+           $ _ssFrontendState serverState
+         pure (serverState { _ssPendingSave = False }, stateMVar)
+       else pure (serverState, stateMVar)
 
 -- Load a saved frontend. Emits nothing if there is no file or decoding fails.
-loadSavedFrontend :: IO (Maybe Frontend.Model)
-loadSavedFrontend = do
+loadSavedFrontend :: BoardName -> IO (Maybe Frontend.Model)
+loadSavedFrontend boardName = do
   join . either (const Nothing) Just
-    <$> try @IO @IOError (Aeson.decodeFileStrict "saved-state.json")
+    <$> try @IO @IOError
+            (Aeson.decodeFileStrict $ savedBoardFileName boardName)
+
+savedBoardFileName :: BoardName -> String
+savedBoardFileName boardName =
+  "saved-state-" <> T.unpack boardName <> ".json"
 

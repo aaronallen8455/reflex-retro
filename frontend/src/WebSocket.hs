@@ -17,12 +17,12 @@ import           Common.Route
 import qualified Widget.Main as Main
 
 connectWebSocket :: (JS.MonadJSM m, JS.MonadJSM (Performable m), HasJSContext m, PerformEvent t m, TriggerEvent t m, PostBuild t m)
-                 => Maybe T.Text -> Event t Main.Ev -> m (Event t Main.Ev)
-connectWebSocket mbBaseURI outboundEvents = do
+                 => Maybe T.Text -> T.Text -> Event t Main.Ev -> m (Event t Main.Ev)
+connectWebSocket mbBaseURI boardName outboundEvents = do
   let encoder = either (error . show) id $ checkEncoder fullRouteEncoder
 
       wsPath = fst . encode encoder
-             $ FullRoute_Backend BackendRoute_WebSocket :/ ()
+             $ FullRoute_Backend BackendRoute_WebSocket :/ (boardName, ())
 
       mbUri = do
         uri' <- URI.mkURI =<< mbBaseURI
