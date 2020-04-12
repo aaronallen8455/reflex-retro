@@ -18,8 +18,9 @@ library
                , lens
                , obelisk-backend
                , obelisk-route
-               , websockets-snap
+               , text
                , websockets
+               , websockets-snap
   exposed-modules:
     Backend
   ghc-options: -Wall

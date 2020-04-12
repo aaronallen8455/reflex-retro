@@ -57,7 +57,7 @@ backend = Backend
 
       serve $ \case
         BackendRoute_Missing :/ _ -> pure ()
-        BackendRoute_WebSocket :/ (boardName, _) -> do
+        BackendRoute_WebSocket :/ boardName -> do
           stateMVar <- liftIO . modifyMVar boardsMVar $ \boardMap ->
             case M.lookup boardName boardMap of
               Nothing -> do
@@ -142,7 +142,7 @@ broadcast serverState senderId msg =
 
 -- Use filesystem persistence to save the state of the frontend.
 saveFrontend :: M.Map BoardName (MVar ServerState) -> IO (M.Map BoardName (MVar ServerState))
-saveFrontend boardMap = do
+saveFrontend boardMap =
   ifor boardMap $ \boardName stateMVar -> modifyMVar stateMVar $ \serverState ->
     if _ssPendingSave serverState
        then do
@@ -153,7 +153,7 @@ saveFrontend boardMap = do
 
 -- Load a saved frontend. Emits nothing if there is no file or decoding fails.
 loadSavedFrontend :: BoardName -> IO (Maybe Frontend.Model)
-loadSavedFrontend boardName = do
+loadSavedFrontend boardName =
   join . either (const Nothing) Just
     <$> try @IO @IOError
             (Aeson.decodeFileStrict $ savedBoardFileName boardName)

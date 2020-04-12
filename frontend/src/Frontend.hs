@@ -20,8 +20,6 @@ import           Common.Route
 import           WebSocket (connectWebSocket)
 import           Widget.Main as Main
 
-import           Debug.Trace
-
 frontend :: Frontend (R FrontendRoute)
 frontend = Frontend
   { _frontend_head = do
@@ -29,9 +27,12 @@ frontend = Frontend
       elAttr "link" ("href" =: static @"main.css" <> "type" =: "text/css" <> "rel" =: "stylesheet") blank
 
   , _frontend_body = subRoute_ $ \case
-        FrontendRoute_Main -> do
-          (boardName, _) <- sample =<< current <$> askRoute
-          traceShow boardName pure ()
+        FrontendRoute_Root -> do
+          el "h2" $ text "Welcome!"
+          el "p" $ text "Use the /board/{boardName} path to access an existing retro board or to start a new one."
+
+        FrontendRoute_Board -> do
+          boardName <- sample =<< current <$> askRoute
 
           mbBaseURI <- Cfg.getTextConfig "common/route"
 
