@@ -106,8 +106,8 @@ actionItemWidget aiId aiStateDyn = divClass "action-item" $ do
     } & inputElementConfig_elementConfig . elementConfig_initialAttributes
           .~ "type" =: "checkbox"
 
-  let completedClass True = "completed-action-item"
-      completedClass _    = ""
+  let completedClass True = "completed-item"
+      completedClass _    = "item"
       completedEv = ChangeCompleted aiId
                 <$> _inputElement_checkedChange completedCheckBox
 

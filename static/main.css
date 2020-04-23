@@ -160,7 +160,16 @@ input[type="checkbox"] {
   word-break: normal;
 }
 
-.completed-action-item {
+.editing {
+  width: 100%;
+}
+
+.editing button {
+  margin-left: 3px;
+  margin-top: 3px;
+}
+
+.completed-item {
   text-decoration: line-through;
 }
 

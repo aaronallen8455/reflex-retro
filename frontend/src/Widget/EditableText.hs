@@ -39,18 +39,23 @@ editableTextDynClass txtDyn classDyn = mdo
            then do
              initVal <- sample $ current txtDyn
 
-             inp <- inputElement
-                      def { _inputElementConfig_initialValue = initVal }
+             let editingClass = (<> " editing") <$> classDyn
+             elDynClass "div" editingClass $ do
+               inp <- inputElement $
+                        def & inputElementConfig_initialValue .~ initVal
+                            & inputElementConfig_elementConfig
+                              . elementConfig_initialAttributes
+                                  .~ ("class" =: "text-input")
 
-             let inpValue = _inputElement_value inp
+               let inpValue = _inputElement_value inp
 
-             confirmEv <- fmap DoneEditing
-                        . tagPromptlyDyn inpValue
-                      <$> simpleButton "Ok"
+               confirmEv <- fmap DoneEditing
+                          . tagPromptlyDyn inpValue
+                        <$> simpleButton "Ok"
 
-             cancelEv <- (CancelEditing <$) <$> simpleButton "Cancel"
+               cancelEv <- (CancelEditing <$) <$> simpleButton "Cancel"
 
-             pure $ leftmost [confirmEv, cancelEv]
+               pure $ leftmost [confirmEv, cancelEv]
            else do
              contentEl <- fst <$> elDynClass' "span" classDyn (dynText txtDyn)
              pure $ MakeEditable <$ domEvent Click contentEl
