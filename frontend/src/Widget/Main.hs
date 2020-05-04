@@ -107,7 +107,8 @@ widget modelDyn = do
 markdownToClipboardWidget :: (DomBuilderSpace m ~ GhcjsDomSpace, DomBuilder t m, PerformEvent t m, JS.MonadJSM (Performable m))
                           => Dynamic t Model -> m ()
 markdownToClipboardWidget modelDyn = do
-  clipboardClickEv <- buttonClass "markdown-button" "Copy Markdown to Clipboard"
+  clipboardClickEv <- buttonClass "markdown-button fancy-button"
+                                  "Copy Markdown to Clipboard"
 
   let markdownEv = toMarkdown
                <$> current modelDyn

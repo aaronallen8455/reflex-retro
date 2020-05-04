@@ -26,6 +26,7 @@ library
                , Widget.Cards
                , Widget.Columns
                , Widget.Comments
+               , Widget.ConfirmDialog
                , Widget.EditableText
                , Widget.Main
                , Widget.SimpleButton

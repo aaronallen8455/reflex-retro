@@ -21,8 +21,9 @@ import           Reflex.Dom.Core
 
 import           Common.Markdown (ToMarkdown(..))
 import qualified Widget.Cards as Cards
+import           Widget.ConfirmDialog (confirmDialog)
 import           Widget.EditableText (editableText)
-import           Widget.SimpleButton (buttonClass)
+import           Widget.SimpleButton (buttonClass, buttonDynAttr)
 import           Widget.TextEntry (textEntry)
 
 data Model =
@@ -46,6 +47,7 @@ data Ev
   | AddColumn T.Text
   | ColCardEvent Int Cards.Ev
   | ChangeTitle Int T.Text
+  | DeleteAllCards
 
 Aeson.deriveJSON Aeson.defaultOptions ''Ev
 
@@ -62,24 +64,29 @@ applyEvent (ColCardEvent colId cardEvent) colMap
 applyEvent (ChangeTitle colId newTitle) colMap
   | T.null newTitle = colMap
   | otherwise = M.adjust (colTitle .~ newTitle) colId colMap
+applyEvent DeleteAllCards colMap
+  = colMap & mapped . colCards .~ M.empty
 
 isKeyEvent :: Ev -> Bool
 isKeyEvent (AddColumn _) = True
 isKeyEvent (ColCardEvent _ ev) = Cards.isKeyEvent ev
+isKeyEvent DeleteAllCards = True
 isKeyEvent _ = False
 
 widget :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m)
        => Dynamic t (M.Map Int Model) -> m (Event t Ev)
 widget colMapDyn = do
-  addColumnEv <- fmap AddColumn
-             <$> textEntry "Add Column..."
+  (addColumnEv, deleteAllCardsEv)
+    <- elClass "div" "col-action-wrapper" $
+      (,) <$> fmap AddColumn <$> textEntry "Add Column..."
+          <*> deleteAllCardsButton colMapDyn
 
   columnWidgetEvents
     <- elClass "div" "columns"
      $ flip fforMaybe (headMay . M.elems)
    <$> listViewWithKey colMapDyn columnWidget
 
-  pure $ leftmost [addColumnEv, columnWidgetEvents]
+  pure $ leftmost [addColumnEv, columnWidgetEvents, deleteAllCardsEv]
 
 columnWidget :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m)
              => Int -> Dynamic t Model -> m (Event t Ev)
@@ -88,7 +95,15 @@ columnWidget colId modelDyn = elClass "div" "column" $ do
     <- (fmap . fmap) (ChangeTitle colId)
      . el "h3" $ editableText (_colTitle <$> modelDyn)
 
-  deleteColumnEv <- (DeleteColumn colId <$) <$> buttonClass "delete-button" "×"
+  deleteClickEv <- buttonClass "delete-button" "×"
+
+  let deleteDialogMessage = ffor modelDyn $ \m ->
+        "Are you sure you want to delete the column '" <> _colTitle m <> "'?"
+
+  deleteColumnEv
+    <- (DeleteColumn colId <$)
+     . ffilter id
+   <$> confirmDialog "Delete Column" deleteDialogMessage deleteClickEv
 
   cardWidgetEvents <- Cards.widget $ _colCards <$> modelDyn
 
@@ -98,6 +113,26 @@ columnWidget colId modelDyn = elClass "div" "column" $ do
                   , deleteColumnEv
                   , changeTitleEv
                   ]
+
+deleteAllCardsButton :: (DomBuilder t m, PostBuild t m, MonadHold t m, MonadFix m)
+                     => Dynamic t (M.Map Int Model) -> m (Event t Ev)
+deleteAllCardsButton modelDyn = do
+  let disabledAttr m =
+        if any (not . M.null . _colCards) m
+           then mempty
+           else "disabled" =: ""
+
+      attrsDyn = ffor modelDyn $ \m ->
+           "class" =: "fancy-button delete-all-button"
+        <> disabledAttr m
+
+  deleteAllClickEv <- buttonDynAttr attrsDyn "Delete All Cards"
+
+  (DeleteAllCards <$) . ffilter id
+    <$> confirmDialog
+          "Delete All Cards"
+          (pure "Are you sure you want to delete all the cards?")
+          deleteAllClickEv
 
 initColumns :: M.Map Int Model
 initColumns = M.fromList
