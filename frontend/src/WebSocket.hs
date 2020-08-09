@@ -22,7 +22,7 @@ connectWebSocket mbBaseURI boardName outboundEvents = do
   let encoder = either (error . show) id $ checkEncoder fullRouteEncoder
 
       wsPath = fst . encode encoder
-             $ FullRoute_Backend BackendRoute_WebSocket :/ boardName
+             $ FullRoute_Backend BackendRouteWebSocket :/ boardName
 
       mbUri = do
         uri' <- URI.mkURI =<< mbBaseURI

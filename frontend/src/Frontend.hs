@@ -27,12 +27,12 @@ frontend = Frontend
       elAttr "link" ("href" =: static @"main.css" <> "type" =: "text/css" <> "rel" =: "stylesheet") blank
 
   , _frontend_body = subRoute_ $ \case
-        FrontendRoute_Root -> do
+        FrontendRouteRoot -> do
           el "h2" $ text "Welcome!"
           el "p" $ text "Use the /board/{boardName} path to access an existing retro board or to start a new one."
 
-        FrontendRoute_Board -> do
-          boardName <- sample =<< current <$> askRoute
+        FrontendRouteBoard -> do
+          boardName <- sample . current =<< askRoute
 
           mbBaseURI <- Cfg.getTextConfig "common/route"
 

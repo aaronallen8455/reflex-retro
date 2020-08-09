@@ -8,6 +8,7 @@ module Widget.Columns
   , applyEvent
   , initColumns
   , isKeyEvent
+  , isActivityEvent
   ) where
 
 import           Control.Lens
@@ -39,8 +40,9 @@ instance ToMarkdown Model where
   toMarkdown cs =
     T.unlines
       $ "### " <> _colTitle cs
-      : map (\(i, c) -> T.pack (show i) <> ". " <> toMarkdown c)
-            ([1 :: Int ..] `zip` M.elems (_colCards cs))
+      : zipWith (\i c -> T.pack (show i) <> ". " <> toMarkdown c)
+                [1 :: Int ..]
+                (M.elems (_colCards cs))
 
 data Ev
   = DeleteColumn Int
@@ -48,6 +50,7 @@ data Ev
   | ColCardEvent Int Cards.Ev
   | ChangeTitle Int T.Text
   | DeleteAllCards
+  | Activity
 
 Aeson.deriveJSON Aeson.defaultOptions ''Ev
 
@@ -66,6 +69,7 @@ applyEvent (ChangeTitle colId newTitle) colMap
   | otherwise = M.adjust (colTitle .~ newTitle) colId colMap
 applyEvent DeleteAllCards colMap
   = colMap & mapped . colCards .~ M.empty
+applyEvent Activity colMap = colMap
 
 isKeyEvent :: Ev -> Bool
 isKeyEvent (AddColumn _) = True
@@ -73,13 +77,19 @@ isKeyEvent (ColCardEvent _ ev) = Cards.isKeyEvent ev
 isKeyEvent DeleteAllCards = True
 isKeyEvent _ = False
 
+isActivityEvent :: Ev -> Bool
+isActivityEvent Activity = True
+isActivityEvent (ColCardEvent _ e) = Cards.isActivityEvent e
+isActivityEvent _ = False
+
 widget :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m)
-       => Dynamic t (M.Map Int Model) -> m (Event t Ev)
-widget colMapDyn = do
+       => Dynamic t (M.Map Int Model) -> m () -> m (Event t Ev)
+widget colMapDyn activityMonitor = do
   (addColumnEv, deleteAllCardsEv)
     <- elClass "div" "col-action-wrapper" $
-      (,) <$> fmap AddColumn <$> textEntry "Add Column..."
-          <*> deleteAllCardsButton colMapDyn
+      (,) <$> (fmap . fmap) (either (const Activity) AddColumn)
+                            (textEntry "Add Column...")
+          <*> (activityMonitor *> deleteAllCardsButton colMapDyn)
 
   columnWidgetEvents
     <- elClass "div" "columns"
@@ -92,7 +102,7 @@ columnWidget :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m)
              => Int -> Dynamic t Model -> m (Event t Ev)
 columnWidget colId modelDyn = elClass "div" "column" $ do
   changeTitleEv
-    <- (fmap . fmap) (ChangeTitle colId)
+    <- (fmap . fmap) (either (const Activity) (ChangeTitle colId))
      . el "h3" $ editableText (_colTitle <$> modelDyn)
 
   deleteClickEv <- buttonClass "delete-button" "×"
@@ -118,9 +128,9 @@ deleteAllCardsButton :: (DomBuilder t m, PostBuild t m, MonadHold t m, MonadFix 
                      => Dynamic t (M.Map Int Model) -> m (Event t Ev)
 deleteAllCardsButton modelDyn = do
   let disabledAttr m =
-        if any (not . M.null . _colCards) m
-           then mempty
-           else "disabled" =: ""
+        if all (M.null . _colCards) m
+           then "disabled" =: ""
+           else mempty
 
       attrsDyn = ffor modelDyn $ \m ->
            "class" =: "fancy-button delete-all-button"

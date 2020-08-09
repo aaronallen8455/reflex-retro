@@ -73,8 +73,12 @@ input[type="checkbox"] {
   background: #99ead8;
 }
 
+.col-action-wrapper {
+  display: flex;
+  justify-content: space-between;
+}
+
 .delete-all-button {
-  position: absolute;
   right: 10px;
 }
 
@@ -269,4 +273,9 @@ div.add-column-wrapper {
 
 .modal-button-wrapper button {
   margin-left: 5px;
+}
+
+.activity-level-monitor {
+  flex-grow: 2;
+  margin-left: 20px;
 }

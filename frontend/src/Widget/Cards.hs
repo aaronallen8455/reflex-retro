@@ -8,6 +8,7 @@ module Widget.Cards
   , widget
   , applyEvent
   , isKeyEvent
+  , isActivityEvent
   ) where
 
 import           Control.Lens
@@ -55,6 +56,7 @@ data Ev
   | DownVote Int
   | ContentChange Int T.Text
   | CardCommentEvent Int Comments.Ev
+  | Activity
 
 Aeson.deriveJSON Aeson.defaultOptions ''Ev
 
@@ -74,16 +76,22 @@ applyEvent (ContentChange i newTxt) cardMap
   | otherwise = M.adjust (cardText .~ newTxt) i cardMap
 applyEvent (CardCommentEvent i ev) cardMap =
   M.adjust (cardComments %~ Comments.applyEvent ev) i cardMap
+applyEvent Activity cardMap = cardMap
 
 isKeyEvent :: Ev -> Bool
 isKeyEvent (AddCard _) = True
 isKeyEvent (CardCommentEvent _ ev) = Comments.isKeyEvent ev
 isKeyEvent _ = False
 
+isActivityEvent :: Ev -> Bool
+isActivityEvent Activity = True
+isActivityEvent (CardCommentEvent _ e) = Comments.isActivityEvent e
+isActivityEvent _ = False
+
 widget :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m)
        => Dynamic t (M.Map Int Model) -> m (Event t Ev)
 widget cardMapDyn = mdo
-  addCardEv <- fmap AddCard
+  addCardEv <- fmap (either (const Activity) AddCard)
            <$> textEntry "Add Card..."
 
   cardWidgetEvents
@@ -96,7 +104,7 @@ cardWidget :: (PostBuild t m, DomBuilder t m, MonadHold t m, MonadFix m)
            => Int -> Dynamic t Model -> m (Event t Ev)
 cardWidget cardId modelDyn = elClass "div" "card" $ do
   contentChangeEv
-    <- (fmap . fmap) (ContentChange cardId)
+    <- (fmap . fmap) (either (const Activity) (ContentChange cardId))
      . elClass "div" "card-content" . editableText $ _cardText <$> modelDyn
   elClass "span" "up-votes" . dynText
     $ T.pack . show . _cardLikes <$> modelDyn

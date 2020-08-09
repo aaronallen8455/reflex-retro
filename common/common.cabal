@@ -11,6 +11,5 @@ library
                , mtl
                , text
   exposed-modules:
-    Common.Api
     Common.Route
     Common.Markdown

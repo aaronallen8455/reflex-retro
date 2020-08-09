@@ -8,6 +8,7 @@ module Widget.ActionItems
   , applyEvent
   , widget
   , isKeyEvent
+  , isActivityEvent
   ) where
 
 import           Control.Lens
@@ -48,6 +49,7 @@ data Ev
   | DeleteActionItem Int
   | ChangeCompleted Int Bool
   | DeleteCompleted
+  | Activity
 
 Aeson.deriveJSON Aeson.defaultOptions ''Ev
 
@@ -60,8 +62,9 @@ instance ToMarkdown Model where
   toMarkdown (Model actionItemMap) =
     T.unlines $
       "### Action Items"
-      : map (\(n, i) -> T.pack (show n) <> ". " <> toMarkdown i)
-            ([1 :: Int ..] `zip` M.elems actionItemMap)
+      : zipWith (\n i -> T.pack (show n) <> ". " <> toMarkdown i)
+                [1 :: Int ..]
+                (M.elems actionItemMap)
 
 applyEvent :: Ev
            -> Model
@@ -81,11 +84,16 @@ applyEvent (ChangeCompleted i b) (Model m) =
   Model $ M.adjust (aiCompleted .~ b) i m
 applyEvent DeleteCompleted (Model m) =
   Model $ M.filter (not . _aiCompleted) m
+applyEvent Activity m = m
 
 isKeyEvent :: Ev -> Bool
 isKeyEvent (NewActionItem _) = True
 isKeyEvent DeleteCompleted = True
 isKeyEvent _ = False
+
+isActivityEvent :: Ev -> Bool
+isActivityEvent Activity = True
+isActivityEvent _ = False
 
 widget :: (MonadFix m, MonadHold t m, PostBuild t m, DomBuilder t m)
        => Dynamic t Model -> m (Event t Ev)
@@ -94,7 +102,7 @@ widget modelDyn = divClass "action-items" $ mdo
 
   deleteCompletedEv <- deleteCompletedButton modelDyn
 
-  addActionItemEv <- fmap NewActionItem
+  addActionItemEv <- fmap (either (const Activity) NewActionItem)
                  <$> textEntry "Add Action Item..."
 
   actionItemsEv
@@ -119,7 +127,7 @@ actionItemWidget aiId aiStateDyn = divClass "action-item" $ do
                 <$> _inputElement_checkedChange completedCheckBox
 
   contentChangedEv
-    <- fmap (ContentChange aiId)
+    <- fmap (either (const Activity) (ContentChange aiId))
    <$> editableTextDynClass (_aiContent <$> aiStateDyn)
                             (completedClass . _aiCompleted <$> aiStateDyn)
 

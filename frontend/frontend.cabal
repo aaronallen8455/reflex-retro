@@ -20,6 +20,7 @@ library
                , reflex-dom
                , safe
                , text
+               , time
   exposed-modules:
     Frontend
   other-modules: Widget.ActionItems

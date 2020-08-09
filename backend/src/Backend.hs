@@ -8,14 +8,16 @@ module Backend
   ) where
 
 import           Common.Route
-import           Control.Concurrent (forkIO, threadDelay)
+import           Control.Concurrent (ThreadId, forkIO, killThread, threadDelay)
 import           Control.Concurrent.MVar (MVar, modifyMVar, modifyMVar_, newMVar)
+import           Control.Exception (mask_)
 import           Control.Lens
-import           Control.Monad (forever, join)
+import           Control.Monad (forever, join, when)
 import           Control.Monad.Catch (finally, try)
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BSL
 import           Data.Foldable (traverse_)
 import qualified Data.Map as M
 import           Data.Maybe (fromMaybe)
@@ -25,7 +27,7 @@ import           Network.WebSockets.Snap (runWebSocketsSnap)
 import           Obelisk.Backend
 import           Obelisk.Route
 
-import qualified Frontend as Frontend
+import qualified Frontend
 
 newtype ClientId =
   ClientId Int
@@ -35,10 +37,11 @@ type BoardName = T.Text
 
 data ServerState =
   ServerState
-    { _ssClients       :: M.Map ClientId WS.Connection
-    , _ssClientIdSeq   :: ClientId
-    , _ssFrontendState :: Frontend.Model
-    , _ssPendingSave   :: Bool
+    { _ssClients         :: M.Map ClientId WS.Connection
+    , _ssClientIdSeq     :: ClientId
+    , _ssFrontendState   :: Frontend.Model
+    , _ssPendingSave     :: Bool
+    , _ssInactivityTimer :: Maybe ThreadId
     }
 
 makeLenses ''ServerState
@@ -56,18 +59,19 @@ backend = Backend
         modifyMVar_ boardsMVar saveFrontend
 
       serve $ \case
-        BackendRoute_Missing :/ _ -> pure ()
-        BackendRoute_WebSocket :/ boardName -> do
+        BackendRouteMissing :/ _ -> pure ()
+        BackendRouteWebSocket :/ boardName -> do
           stateMVar <- liftIO . modifyMVar boardsMVar $ \boardMap ->
             case M.lookup boardName boardMap of
               Nothing -> do
                 -- if the board doesn't exist, initialize a new state for it
                 mbLoaded <- loadSavedFrontend boardName
                 s <- newMVar ServerState
-                       { _ssClients       = M.empty
-                       , _ssClientIdSeq   = ClientId 0
-                       , _ssFrontendState = fromMaybe Frontend.initModel mbLoaded
-                       , _ssPendingSave   = False
+                       { _ssClients         = M.empty
+                       , _ssClientIdSeq     = ClientId 0
+                       , _ssFrontendState   = fromMaybe Frontend.initModel mbLoaded
+                       , _ssPendingSave     = False
+                       , _ssInactivityTimer = Nothing
                        }
 
                 pure (M.insert boardName s boardMap, s)
@@ -104,10 +108,10 @@ addClient serverState pending = do
 
     let clientId = _ssClientIdSeq s
 
-    pure $ ( s & ssClientIdSeq %~ succ
-               & ssClients . at clientId ?~ conn
-           , (clientId, conn)
-           )
+    pure ( s & ssClientIdSeq %~ succ
+             & ssClients . at clientId ?~ conn
+         , (clientId, conn)
+         )
 
 talkToClient :: MVar ServerState -> ClientId -> WS.Connection -> IO ()
 talkToClient serverState clientId conn = do
@@ -118,27 +122,32 @@ talkToClient serverState clientId conn = do
   case Aeson.decodeStrict msg of
     Just ev -> modifyMVar_ serverState $ \s -> do
       let (newFrontend, newState) =
-            s & ssPendingSave %~ not
+            s & ssPendingSave .~ True
               & ssFrontendState <%~ Frontend.applyEvent ev
 
       -- send full sync to client on key events
-      if Frontend.isKeyEvent ev
-         then WS.sendTextData
-                conn
-                (Aeson.encode $ Frontend.mkReplaceEvent newFrontend)
-         else pure ()
+      when (Frontend.isKeyEvent ev) $
+         WS.sendTextData
+           conn
+           (Aeson.encode $ Frontend.mkReplaceEvent newFrontend)
+
+      newState' <-
+        if Frontend.isActivityEvent ev
+         then setInactivityTimer newState serverState
+         else pure newState
 
       -- send message to other clients
-      broadcast newState clientId msg
+      broadcast newState' (Just clientId) msg
 
-      pure newState
+      pure newState'
 
     Nothing -> pure ()
 
-broadcast :: ServerState -> ClientId -> BS.ByteString -> IO ()
-broadcast serverState senderId msg =
-  let clients = M.delete senderId $ _ssClients serverState
-   in traverse_ (flip WS.sendTextData msg) clients
+-- Send a message to all clients, excluding the sender if applicable
+broadcast :: ServerState -> Maybe ClientId -> BS.ByteString -> IO ()
+broadcast serverState mbSenderId msg =
+  let clients = maybe id M.delete mbSenderId $ _ssClients serverState
+   in traverse_ (`WS.sendTextData` msg) clients
 
 -- Use filesystem persistence to save the state of the frontend.
 saveFrontend :: M.Map BoardName (MVar ServerState) -> IO (M.Map BoardName (MVar ServerState))
@@ -161,4 +170,23 @@ loadSavedFrontend boardName =
 savedBoardFileName :: BoardName -> String
 savedBoardFileName boardName =
   "saved-state-" <> T.unpack boardName <> ".json"
+
+-- Spawn a thread that will send the inactivity event to all of a board's clients
+-- after a timer expires. First kills the current inactivity timer if there is
+-- one.
+setInactivityTimer :: ServerState -> MVar ServerState -> IO ServerState
+setInactivityTimer currentState stateMVar = do
+  traverse_ killThread $ _ssInactivityTimer currentState
+  tid <- forkIO $ do
+    threadDelay 4000000 -- wait before becoming inactive
+
+    let inactivityEv = Frontend.mkInactivityEvent
+
+    mask_ $ modifyMVar_ stateMVar $ \s -> do
+      broadcast s Nothing . BSL.toStrict
+        $ Aeson.encode inactivityEv
+      pure $ s & ssFrontendState %~ Frontend.applyEvent inactivityEv
+               & ssInactivityTimer .~ Nothing
+
+  pure $ currentState & ssInactivityTimer ?~ tid
 

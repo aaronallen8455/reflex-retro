@@ -7,6 +7,7 @@ module Widget.Comments
   , widget
   , applyEvent
   , isKeyEvent
+  , isActivityEvent
   ) where
 
 import           Control.Lens
@@ -23,7 +24,7 @@ import           Widget.EditableText (editableText)
 import           Widget.SimpleButton (buttonClass)
 import           Widget.TextEntry (textEntry)
 
-data Model =
+newtype Model =
   Model
     { _csContent :: T.Text
     } deriving (Show, Eq)
@@ -38,6 +39,7 @@ data Ev
   = AddComment T.Text
   | DeleteComment Int
   | EditComment Int T.Text
+  | Activity
 
 Aeson.deriveJSON Aeson.defaultOptions ''Ev
 
@@ -52,15 +54,20 @@ applyEvent (DeleteComment i) comMap =
 applyEvent (EditComment i txt) comMap
   | T.null txt = comMap
   | otherwise = M.adjust (csContent .~ txt) i comMap
+applyEvent Activity comMap = comMap
 
 isKeyEvent :: Ev -> Bool
 isKeyEvent (AddComment _) = True
 isKeyEvent _ = False
 
+isActivityEvent :: Ev -> Bool
+isActivityEvent Activity = True
+isActivityEvent _ = False
+
 widget :: (DomBuilder t m, PostBuild t m, MonadHold t m, MonadFix m)
        => Dynamic t (M.Map Int Model) -> m (Event t Ev)
 widget comMapDyn = divClass "comments" $ mdo
-  addCommentEv <- fmap AddComment
+  addCommentEv <- fmap (either (const Activity) AddComment)
               <$> textEntry "Add Comment..."
 
   commentWidgetEvents
@@ -73,7 +80,7 @@ commentWidget :: (MonadFix m, DomBuilder t m, MonadHold t m, PostBuild t m)
               => Int -> Dynamic t Model -> m (Event t Ev)
 commentWidget comId modelDyn = divClass "comment" $ do
   editComEv <- elClass "div" "comment-content"
-             . (fmap . fmap) (EditComment comId)
+             . (fmap . fmap) (either (const Activity) (EditComment comId))
              $ editableText (_csContent <$> modelDyn)
 
   deleteComEv <- (DeleteComment comId <$) <$> buttonClass "delete-button" "×"

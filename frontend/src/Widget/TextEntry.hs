@@ -11,7 +11,7 @@ import           Reflex.Dom.Core
 
 textEntry :: (DomBuilder t m, MonadFix m)
           => T.Text
-          -> m (Event t T.Text)
+          -> m (Event t (Either Key T.Text))
 textEntry placeHolder = mdo
   let attrs = ("placeholder" =: placeHolder)
            <> ("class" =: "text-input")
@@ -24,9 +24,16 @@ textEntry placeHolder = mdo
   inp <- inputElement inpElConfig
 
   let inpEl = _inputElement_element inp
-      enterKeyEv = keydown Enter inpEl
+      keydownEvent = keyCodeLookup . fromIntegral
+                 <$> domEvent Keydown inpEl
+      enterKeyEv = ffilter (== Enter) keydownEvent
       clearInpEv = "" <$ enterKeyEv
 
-  pure $ current (_inputElement_value inp)
-      <@ enterKeyEv
+      resultEv =
+        leftmost
+          [ Right <$> tag (current $ _inputElement_value inp) enterKeyEv
+          , Left <$> keydownEvent
+          ]
+
+  pure resultEv
 
