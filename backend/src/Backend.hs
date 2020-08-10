@@ -182,7 +182,7 @@ setInactivityTimer currentState stateMVar = do
 
     let inactivityEv = Frontend.mkInactivityEvent
 
-    mask_ $ modifyMVar_ stateMVar $ \s -> do
+    mask_ . modifyMVar_ stateMVar $ \s -> do
       broadcast s Nothing . BSL.toStrict
         $ Aeson.encode inactivityEv
       pure $ s & ssFrontendState %~ Frontend.applyEvent inactivityEv

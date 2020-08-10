@@ -278,4 +278,6 @@ div.add-column-wrapper {
 .activity-level-monitor {
   flex-grow: 2;
   margin-left: 20px;
+  margin-top: auto;
+  margin-bottom: auto;
 }
