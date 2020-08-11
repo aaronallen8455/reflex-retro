@@ -49,7 +49,7 @@ data Model =
 
 data TypingActivityStatus
   = SomeoneTyping
-  | NooneTyping
+  | NobodyTyping
 
 makeLenses ''Model
 Aeson.deriveJSON Aeson.defaultOptions ''TypingActivityStatus
@@ -68,7 +68,7 @@ initModel =
     { _fsColumns        = Columns.initColumns
     , _fsActionItems    = mempty
     , _fsTitle          = "Retro"
-    , _fsTypingActivity = NooneTyping
+    , _fsTypingActivity = NobodyTyping
     }
 
 data Ev
@@ -119,7 +119,7 @@ applyEvent (ChangeTitle txt) fs
   | otherwise = fs
 applyEvent Activity fs = fs
 applyEvent Inactivity fs =
-  fs & fsTypingActivity .~ NooneTyping
+  fs & fsTypingActivity .~ NobodyTyping
 
 widget :: (DomBuilderSpace m ~ GhcjsDomSpace, DomBuilder t m, PostBuild t m, PerformEvent t m, JS.MonadJSM (Performable m), MonadHold t m, MonadFix m)
        => Dynamic t Model -> m (Event t Ev)
@@ -199,5 +199,5 @@ activityMonitorWidget activityDyn =
     dynText $ activityLevelToText <$> activityDyn
   where
     activityLevelToText SomeoneTyping = "Someone is typing"
-    activityLevelToText NooneTyping   = "Noone typing"
+    activityLevelToText NobodyTyping  = "Nobody typing"
 
