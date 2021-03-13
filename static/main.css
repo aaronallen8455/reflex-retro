@@ -281,3 +281,25 @@ div.add-column-wrapper {
   margin-top: auto;
   margin-bottom: auto;
 }
+
+.toast {
+  position: fixed;
+  top: 100%;
+  background-color: black;
+  color: azure;
+  padding: 20px;
+  border-radius: 5px 5px 0 0;
+  font-size: 1.2em;
+  font-weight: bold;
+  left: 50%;
+  transition: transform .3s ease;
+  z-index: 2
+}
+
+.toast.hide-toast {
+  transform: translate(-50%, 0);
+}
+
+.toast.show-toast {
+  transform: translate(-50%, -100%);
+}

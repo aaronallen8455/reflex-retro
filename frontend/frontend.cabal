@@ -34,6 +34,7 @@ library
                , Widget.TextEntry
                , WebSocket
   ghc-options: -Wall
+  default-extensions: StrictData
 
 executable frontend
   main-is: main.hs

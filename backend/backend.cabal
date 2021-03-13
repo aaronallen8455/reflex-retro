@@ -24,6 +24,7 @@ library
   exposed-modules:
     Backend
   ghc-options: -Wall
+  default-extensions: StrictData
 
 executable backend
   main-is: main.hs

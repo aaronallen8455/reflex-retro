@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE PackageImports #-}
+{-# LANGUAGE RecursiveDo #-}
 module Widget.Main
   ( Model
   , Ev
@@ -18,7 +19,7 @@ module Widget.Main
 
 import           Control.Lens
 import           Control.Monad.Fix (MonadFix)
-import           Control.Monad.IO.Class (liftIO)
+import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.TH as Aeson
 import           Data.Foldable (for_)
@@ -121,7 +122,7 @@ applyEvent Activity fs = fs
 applyEvent Inactivity fs =
   fs & fsTypingActivity .~ NobodyTyping
 
-widget :: (DomBuilderSpace m ~ GhcjsDomSpace, DomBuilder t m, PostBuild t m, PerformEvent t m, JS.MonadJSM (Performable m), MonadHold t m, MonadFix m)
+widget :: (DomBuilderSpace m ~ GhcjsDomSpace, DomBuilder t m, PostBuild t m, PerformEvent t m, JS.MonadJSM (Performable m), MonadHold t m, MonadFix m, TriggerEvent t m)
        => Dynamic t Model -> m (Event t Ev)
 widget modelDyn = do
   editTitleEv
@@ -169,7 +170,7 @@ widget modelDyn = do
 
   pure . fmapMaybe fst $ updated eventAndLastActivityTime
 
-markdownToClipboardWidget :: (DomBuilderSpace m ~ GhcjsDomSpace, DomBuilder t m, PerformEvent t m, JS.MonadJSM (Performable m))
+markdownToClipboardWidget :: (DomBuilderSpace m ~ GhcjsDomSpace, DomBuilder t m, PerformEvent t m, JS.MonadJSM (Performable m), TriggerEvent t m, MonadHold t m, MonadFix m, PostBuild t m)
                           => Dynamic t Model -> m ()
 markdownToClipboardWidget modelDyn = do
   clipboardClickEv <- buttonClass "markdown-button fancy-button"
@@ -182,6 +183,8 @@ markdownToClipboardWidget modelDyn = do
   mdTextArea <- divClass "markdown-output" . textAreaElement $
     def & textAreaElementConfig_setValue .~ markdownEv
 
+  copiedToClipboardToast clipboardClickEv
+
   let copyToClipBoard = do
         DOM.select $ _textAreaElement_raw mdTextArea
         mbDoc <- DOM.currentDocument
@@ -190,6 +193,35 @@ markdownToClipboardWidget modelDyn = do
 
   performEvent_
     $ copyToClipBoard <$ updated (_textAreaElement_value mdTextArea)
+
+data ToastClass
+  = ToastHidden
+  | ToastShown
+
+toastClassAttr :: ToastClass -> M.Map T.Text T.Text
+toastClassAttr tc = "class" =: cls where
+  cls = case tc of
+          ToastHidden -> "toast hide-toast"
+          ToastShown  -> "toast show-toast"
+
+-- | Toast notification for when mardown has been copied to clipboard
+copiedToClipboardToast :: (DomBuilder t m, PostBuild t m, MonadIO (Performable m), TriggerEvent t m, PerformEvent t m, MonadHold t m, MonadFix m)
+                       => Event t a -> m ()
+copiedToClipboardToast mdCopiedEv = mdo
+  let showToastEv = ToastShown <$ mdCopiedEv
+
+      maybeHide ToastHidden _ = Just ToastHidden -- don't attach hide ev if currently shown
+      maybeHide _ _ = Nothing
+
+  hideToastEv <- delay 2.5 $
+    attachWithMaybe maybeHide (current toastClassDyn) mdCopiedEv
+
+  let toastClassEv = leftmost [hideToastEv, showToastEv]
+
+  toastClassDyn <- foldDyn const ToastHidden toastClassEv
+
+  elDynAttr "div" (toastClassAttr <$> toastClassDyn)
+    $ text "Markdown copied to clipboard!"
 
 activityMonitorWidget :: (DomBuilder t m, PostBuild t m)
                       => Dynamic t TypingActivityStatus -> m ()
