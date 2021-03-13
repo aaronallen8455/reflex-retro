@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RecursiveDo #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Widget.ActionItems
   ( Ev
   , Model
